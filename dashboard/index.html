@@ -80,20 +80,6 @@ nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: 
 .gym { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-weight: 700; cursor: pointer; }
 .gym input { width: 20px; height: 20px; accent-color: var(--accent); }
 .gym .sub { margin-left: auto; font-weight: 500; }
-.ticks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.tasks-sub { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
-.tick { background: var(--bg); border-radius: 12px; padding: 10px 12px; min-width: 0; }
-.tk-name { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.tk-px { font-family: var(--font-display); font-size: 22px; line-height: 1.15; margin-top: 2px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.tk-chg { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.tk-chg.up { color: var(--ok); } .tk-chg.down { color: var(--warn); }
-.tk-sym { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.rates { width: 100%; border-collapse: collapse; margin-top: 12px; font-variant-numeric: tabular-nums; }
-.rates th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 4px 0; border-bottom: 1px solid var(--line); }
-.rates td { padding: 6px 0; border-bottom: 1px solid var(--line); }
-.rates tr:last-child td { border-bottom: 0; }
-.rates .num { text-align: right; }
-@media (max-width: 420px) { .ticks { grid-template-columns: 1fr; } }
 .layout-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
 .layout-bar .sub { flex: 1; min-width: 200px; }
 .slot { min-width: 0; display: grid; }
@@ -296,10 +282,6 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
           <div id="schedule"></div>
           <div id="plan-out"></div>
         </div>
-        <div class="card" id="market-card">
-          <h2>Market snapshot <span class="act sub" id="market-status"></span></h2>
-          <div id="market"></div>
-        </div>
       </div>
     </div>
   </section>
@@ -391,7 +373,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
         <div class="card privacy">
           <h2>Privacy &amp; your data</h2>
           <h3>What's saved</h3>
-          <p>Your settings, dashboard layout, saved market numbers, a copy of your training split, tasks and lists, top priorities, check-in answers, gym check-offs, your Proverbs reading log and notes, and the daily commercial real estate and world news links.</p>
+          <p>Your settings, dashboard layout, a copy of your training split, tasks and lists, top priorities, check-in answers, gym check-offs, your Proverbs reading log and notes, and the daily commercial real estate and world news links.</p>
           <h3>Where it's stored</h3>
           <p>In this artifact's private data store on claude.ai, under your Claude account. Access rules limit it to you (and anyone you explicitly give edit access). It is not in any public code repository.</p>
           <h3>What isn't saved</h3>
@@ -619,7 +601,7 @@ function carried(list) {
 
 /* ---------- Rendering ---------- */
 function renderAll() {
-  renderHeader(); renderSetup(); renderCheckin(); renderVerse(); renderQuote(); renderArticles(); renderWorld(); renderMarket();
+  renderHeader(); renderSetup(); renderCheckin(); renderVerse(); renderQuote(); renderArticles(); renderWorld();
   renderTop3(); renderSchedule(); renderTodayItems(); renderLists(); renderProverbs(); renderSettings();
 }
 
@@ -744,109 +726,6 @@ function renderWorld() {
       <a href="${esc(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${esc(a.title)}</a>
       ${a.why ? `<p>${esc(a.why)}</p>` : ""}</li>`).join("")}</ol>`;
 }
-/* ---------- Market snapshot (Alpha Vantage, free plan: 25 requests/day, 1/sec) ---------- */
-const AV = "Alpha Vantage MCP Server";
-const ETFS = [{ sym: "VOO", name: "S&P 500" }, { sym: "QQQ", name: "Nasdaq-100" }, { sym: "VXUS", name: "International" }];
-const MATURITIES = [["2year", "2-year Treasury"], ["10year", "10-year Treasury"], ["30year", "30-year Treasury"]];
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-function avPayload(r) {
-  let p = r && r.payload; if (typeof p === "string") { try { p = JSON.parse(p); } catch {} }
-  if (!p || typeof p !== "object") throw { code: "bad_data" };
-  if (p.error || p.Information || p.Note) throw { code: "av_limit", message: (p.error && p.error.message) || p.Information || p.Note };
-  return p;
-}
-async function av(tool, input) { return avPayload(await S.mcp.callTool(AV, tool, input, { cache: false })); }
-function nyParts() { const p = partsIn("America/New_York"); return { date: `${p.year}-${p.month}-${p.day}`, mins: +p.hour * 60 + +p.minute, wd: p.weekday, p }; }
-function marketOpen() { const n = nyParts(); return !["Sat", "Sun"].includes(n.wd) && n.mins >= 570 && n.mins < 960; }
-function lastCloseEpoch() {
-  const { p, date } = nyParts();
-  const off = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - Math.floor(Date.now() / 60000) * 60000;
-  let d = date;
-  for (let i = 0; i < 8; i++) {
-    const wd = new Date(d + "T12:00:00Z").getUTCDay(), e = Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), 17, 0) - off;
-    if (wd !== 0 && wd !== 6 && e <= Date.now()) return e;
-    d = addDays(d, -1);
-  }
-  return 0;
-}
-function latestTwo(data) { const v = (data || []).filter((x) => x && !isNaN(parseFloat(x.value))); return v.length ? { value: parseFloat(v[0].value), date: v[0].date, prev: v[1] ? parseFloat(v[1].value) : null } : null; }
-let marketBusy = false;
-async function refreshMarket() {
-  if (marketBusy || !S.mcp || !S.db || !S.marketLoaded) return;
-  // After a failure, wait an hour before trying again so a bad day can't burn the 25 free requests.
-  try { if (Date.now() < +(localStorage.getItem("anchor.marketBackoff") || 0)) return; } catch {}
-  const m = { ...(S.market || {}) }, now = Date.now();
-  // The free plan only serves end-of-day prices, so fetch once after each close instead of hourly.
-  const needQuotes = !m.quotesAt || ETFS.some((e) => !(m.quotes || {})[e.sym]) || m.quotesAt < lastCloseEpoch();
-  const needYields = m.yieldsDay !== localDate() || MATURITIES.some(([k]) => !(m.yields || {})[k]);
-  const needFed = !m.fed || !m.fedAt || now - m.fedAt > 7 * 86400000;
-  if (!needQuotes && !needYields && !needFed) return;
-  marketBusy = true; S.marketErr = null; renderMarket();
-  try {
-    if (needQuotes) {
-      const quotes = {};
-      for (const e of ETFS) {
-        const q = (await av("GLOBAL_QUOTE", { symbol: e.sym, datatype: "json" }))["Global Quote"] || {};
-        const price = parseFloat(q["05. price"]); if (isNaN(price)) throw { code: "bad_data" };
-        quotes[e.sym] = { price, chg: parseFloat(q["09. change"]) || 0, pct: parseFloat(q["10. change percent"]) || 0, day: q["07. latest trading day"] || "" };
-        await sleep(1300);
-      }
-      m.quotes = quotes; m.quotesAt = Date.now();
-      S.market = { ...m }; renderMarket(); await S.db.doc("market/snapshot").set(m).catch(dbFail);
-    }
-    if (needYields) {
-      const yields = {};
-      for (const [k] of MATURITIES) {
-        const prev = (m.yields || {})[k];
-        if (prev && m.yieldsDay === localDate()) { yields[k] = prev; continue; }
-        yields[k] = latestTwo((await av("TREASURY_YIELD", { maturity: k, interval: "daily", datatype: "json" })).data) || prev || null;
-        await sleep(1300);
-      }
-      m.yields = yields;
-      if (MATURITIES.every(([k]) => yields[k])) m.yieldsDay = localDate(); else throw { code: "bad_data" };
-      S.market = { ...m }; renderMarket(); await S.db.doc("market/snapshot").set(m).catch(dbFail);
-    }
-    if (needFed) {
-      const fed = latestTwo((await av("FEDERAL_FUNDS_RATE", { interval: "daily", datatype: "json" })).data);
-      if (!fed) throw { code: "bad_data" };
-      m.fed = fed; m.fedAt = Date.now();
-      S.market = { ...m }; renderMarket(); await S.db.doc("market/snapshot").set(m).catch(dbFail);
-    }
-  } catch (e) { S.marketErr = e || { code: "unknown" }; try { localStorage.setItem("anchor.marketBackoff", String(Date.now() + 60 * 60000)); } catch {} }
-  finally { marketBusy = false; renderMarket(); }
-}
-function renderMarket() {
-  const el = $("#market"); if (!el) return;
-  const m = S.market || {}, open = marketOpen(), err = S.marketErr;
-  $("#market-status").textContent = open ? "Market open · last close shown" : "Market closed";
-  const sign = (n) => (n > 0 ? "+" : n < 0 ? "−" : "");
-  const tiles = ETFS.map((e) => {
-    const q = (m.quotes || {})[e.sym];
-    if (!q) return `<div class="tick"><div class="tk-name">${e.name}</div><div class="tk-px">—</div><div class="tk-sym">${e.sym} ETF</div></div>`;
-    const up = q.chg >= 0;
-    return `<div class="tick"><div class="tk-name">${e.name}</div><div class="tk-px">$${q.price.toFixed(2)}</div>
-      <div class="tk-chg ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${sign(q.pct)}${Math.abs(q.pct).toFixed(2)}%</div><div class="tk-sym">${e.sym} ETF · ${sign(q.chg)}$${Math.abs(q.chg).toFixed(2)}</div></div>`;
-  }).join("");
-  const rows = MATURITIES.map(([k, label]) => {
-    const y = (m.yields || {})[k]; if (!y) return `<tr><td>${label}</td><td class="num">—</td><td class="num"></td></tr>`;
-    const bp = y.prev == null ? null : Math.round((y.value - y.prev) * 100);
-    return `<tr><td>${label}</td><td class="num"><b>${y.value.toFixed(2)}%</b></td><td class="num sub">${bp == null ? "" : `${sign(bp)}${Math.abs(bp)} bp`}</td></tr>`;
-  });
-  if (m.fed) rows.push(`<tr><td>Fed funds (effective)</td><td class="num"><b>${m.fed.value.toFixed(2)}%</b></td><td class="num sub"></td></tr>`);
-  const day = m.quotes && m.quotes.VOO && m.quotes.VOO.day;
-  const yDate = m.yields && m.yields["10year"] && m.yields["10year"].date;
-  const errMsg = !err ? "" : err.code === "av_limit" ? "Alpha Vantage's free daily limit (25 requests) is used up. Showing the last saved numbers."
-    : err.code === "server_not_connected" || err.code === "needs_reauth" ? "Connect or reconnect Alpha Vantage in claude.ai Settings → Connectors."
-    : err.code === "not_in_manifest" || err.code === "approval_required" ? "Allow this page to use Alpha Vantage to load market data."
-    : err.code === "not_granted" || err.code === "capability_disabled" ? "Market data isn't available in this view." : "Couldn't update market data right now. Showing the last saved numbers.";
-  el.innerHTML = `${!S.mcp ? `<p class="sub" style="margin:0 0 10px">Market data loads when the dashboard is open on claude.ai.</p>` : ""}
-    <div class="ticks">${tiles}</div>
-    <table class="rates"><thead><tr><th>Rate</th><th class="num">Yield</th><th class="num">Day chg</th></tr></thead><tbody>${rows.join("")}</tbody></table>
-    ${errMsg ? `<p class="notice" style="margin:10px 0 0">${esc(errMsg)}</p>` : ""}
-    <p class="hint">${marketBusy ? "Updating… " : ""}${day ? `Closing prices from ${esc(fmtDate(day, { weekday: "short", month: "short", day: "numeric" }))}` : ""}${m.quotesAt ? `, updated ${new Date(m.quotesAt).toLocaleTimeString("en-US", { timeZone: cfg().tz, hour: "numeric", minute: "2-digit" })}` : ""}${yDate ? ` · Treasuries as of ${esc(fmtDate(yDate, { month: "short", day: "numeric" }))}` : ""}.
-      VOO tracks the S&P 500, QQQ the Nasdaq-100, and VXUS stocks outside the US. Your free Alpha Vantage plan only provides end-of-day prices (live and 15-minute-delayed quotes need a paid plan), so these update once each evening after the market closes. Treasury data from Alpha Vantage usually lags a day or two.</p>`;
-}
-
 function safeUrl(u) { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:" ? x.href : "#"; } catch { return "#"; } }
 
 function renderTop3() {
@@ -1169,7 +1048,7 @@ async function wipe() {
     $("#w-no").onclick = () => { $("#modal-root").innerHTML = ""; resolve(false); };
   });
   if (!ok || !S.db) return;
-  for (const col of ["items", "days", "daily", "settings", "market", "training"]) {
+  for (const col of ["items", "days", "daily", "settings", "training"]) {
     const snap = await S.db.collection(col).limit(1000).get().catch(() => null);
     if (snap) for (const d of snap.docs) await S.db.doc(col + "/" + d.id).delete().catch(() => {});
   }
@@ -1204,9 +1083,8 @@ const CARDS = [
   { key: "world", sel: "#world-card", name: "World briefing" },
   { key: "top3", sel: "#top3-card", name: "Top 3, tasks & gym" },
   { key: "schedule", sel: "#schedule-card", name: "Schedule" },
-  { key: "market", sel: "#market-card", name: "Market snapshot" },
 ];
-const DEFAULT_LAYOUT = { left: ["checkin", "verse", "quote", "cre", "world"], right: ["top3", "schedule", "market"], hidden: [] };
+const DEFAULT_LAYOUT = { left: ["checkin", "verse", "quote", "cre", "world"], right: ["top3", "schedule"], hidden: [] };
 let layout = JSON.parse(JSON.stringify(DEFAULT_LAYOUT)), editing = false;
 const narrow = () => window.matchMedia("(max-width: 900px)").matches;
 const slotOf = (k) => document.querySelector(`.slot[data-card="${k}"]`);
@@ -1324,8 +1202,6 @@ setInterval(() => {
   db.collection("items").onSnapshot((s) => { S.items = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderAll(); }, fail);
   db.collection("days").where("date", ">=", [addDays(today(), -14), today().slice(0, 8) + "01"].sort()[0]).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
   db.doc("settings/layout").onSnapshot((s) => { if (s.exists && !s.metadata.hasPendingWrites) { layout = normLayout(s.data()); try { localStorage.setItem("anchor.layout", JSON.stringify(layout)); } catch {} applyLayout(); } }, fail);
-  db.doc("market/snapshot").onSnapshot((s) => { if (!marketBusy) S.market = s.exists ? s.data() : null; S.marketLoaded = true; renderMarket(); refreshMarket(); }, fail);
-  setInterval(refreshMarket, 5 * 60 * 1000);
   db.doc("training/split").onSnapshot((s) => { S.training = s.exists ? s.data() : null; renderTop3(); }, fail);
   db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); renderWorld(); }, fail);
 })();
