@@ -18,7 +18,7 @@ A personal daily dashboard that runs inside Claude as a private claude.ai artifa
 | Google Calendar | Read live through your claude.ai Google Calendar connector (`list_events`). The page only creates events (`create_event`) after you confirm. No tokens are stored in the page or this repo. |
 | Your data | The artifact's private database, with access rules limited to the owner and editors. |
 | Verse & quote | Built-in rotation keyed to your local date. Each stays the same all day, and none repeats until the full list has cycled (34 verses, 30 quotes). |
-| CRE articles | A scheduled Claude task ("Daily CRE reads", 5:46 AM Central) searches established outlets and saves three links to the artifact. |
+| CRE articles | A scheduled Claude task ("Daily CRE reads", 5:46 AM Central) searches established outlets for US-only stories and saves three links to the artifact. |
 | Notifications | Off. The page can't notify you by itself; a scheduled task can be added later if you want phone notifications. |
 
 ## Limitations
