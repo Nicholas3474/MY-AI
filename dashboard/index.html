@@ -134,13 +134,6 @@ textarea { resize: vertical; min-height: 64px; }
 .articles .meta { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
 .articles p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
 
-.habits { display: grid; gap: 10px; }
-.habit { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
-.dots { display: flex; gap: 4px; }
-.dot { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); font-size: 10px; color: var(--muted); display: grid; place-items: center; padding: 0; }
-.dot.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
-.meals { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 6px 10px; align-items: center; }
-.meals label { font-weight: 600; font-size: 13px; color: var(--muted); }
 
 .chat { display: flex; flex-direction: column; gap: 10px; min-height: 360px; }
 .msgs { display: flex; flex-direction: column; gap: 10px; }
@@ -182,7 +175,6 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" data-tab="today" aria-selected="true">Today</button>
     <button role="tab" data-tab="lists" aria-selected="false">Lists</button>
-    <button role="tab" data-tab="life" aria-selected="false">Habits &amp; meals</button>
     <button role="tab" data-tab="chat" aria-selected="false">Assistant</button>
     <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
   </nav>
@@ -255,34 +247,6 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
     </div>
   </section>
 
-  <!-- LIFE -->
-  <section data-panel="life" hidden>
-    <div class="grid">
-      <div class="col">
-        <div class="card">
-          <h2>Habits · last 7 days</h2>
-          <div class="habits" id="habits"></div>
-          <form class="addrow" id="habit-add" style="margin-top:12px">
-            <input type="text" id="habit-add-input" placeholder="New habit, e.g. Read Scripture" aria-label="New habit" autocomplete="off">
-            <button class="btn" type="submit">Add</button>
-          </form>
-        </div>
-        <div class="card">
-          <h2>Goals</h2>
-          <ul class="items" id="goals"></ul>
-          <p class="hint">Edit your goals in Settings. The assistant keeps them in mind when it helps you plan.</p>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card">
-          <h2>Meals this week <button class="btn link act" id="meals-to-shop" type="button">Add to shopping →</button></h2>
-          <div class="meals" id="meals"></div>
-          <p class="hint">Saved as you type. Ask the assistant to plan a week of simple meals or turn them into a shopping list.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- CHAT -->
   <section data-panel="chat" hidden>
     <div class="grid">
@@ -302,7 +266,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
           <h2>What the assistant can do here</h2>
           <ul class="privacy" style="padding-left:18px;margin:0">
             <li>Add tasks, errands, reminders and shopping items to your lists.</li>
-            <li>Set today's top priorities, add habits, fill in your meal plan.</li>
+            <li>Set today's top priorities and mark things done.</li>
             <li>Plan around today's calendar using what this page can see.</li>
             <li>Suggest a calendar event. Nothing is added until you tap <b>Add to calendar</b>.</li>
           </ul>
@@ -325,7 +289,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
         <div class="card privacy">
           <h2>Privacy &amp; your data</h2>
           <h3>What's saved</h3>
-          <p>Your settings, tasks and lists, top priorities, check-in answers, habits, meal plan, and the daily commercial real estate links.</p>
+          <p>Your settings, tasks and lists, top priorities, check-in answers, and the daily commercial real estate links.</p>
           <h3>Where it's stored</h3>
           <p>In this artifact's private data store on claude.ai, under your Claude account. Access rules limit it to you (and anyone you explicitly give edit access). It is not in any public code repository.</p>
           <h3>What isn't saved</h3>
@@ -449,15 +413,13 @@ const LISTS = [
   { id: "reminder", name: "Reminders", carry: true },
   { id: "shopping", name: "Shopping", carry: false },
 ];
-const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-const DAY_NAMES = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
 const CAL = "Google Calendar";
 const DEFAULTS = { name: "", tz: "America/Chicago", wake: "06:30", sleep: "22:30", energy: "morning", goals: [], morning: "07:00", evening: "20:30", notify: "off", translation: "ESV" };
 
 /* ---------- State ---------- */
 const S = {
   settings: null, settingsLoaded: false,
-  items: [], days: {}, habits: [], meals: {}, daily: null,
+  items: [], days: {}, daily: null,
   events: null, calError: null, calStamp: null,
   tab: "today", list: "task",
   db: null, mcp: null, sample: null,
@@ -480,7 +442,6 @@ function dayNumber(iso) { return Math.floor(Date.parse(iso + "T00:00:00Z") / 864
 function hm(mins) { const h = Math.floor(mins / 60), m = mins % 60; const ap = h >= 12 ? "pm" : "am"; const hh = ((h + 11) % 12) + 1; return m ? `${hh}:${String(m).padStart(2, "0")}${ap}` : `${hh}${ap}`; }
 function toMins(t) { const [h, m] = String(t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); }
 function fmtDate(iso, opts) { return new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", ...opts }); }
-function weekdayKey(iso) { return DAYS[(new Date(iso + "T12:00:00Z").getUTCDay() + 6) % 7]; }
 function mode() {
   const m = localMinutes(), c = cfg();
   if (m >= toMins(c.evening) - 60 || m < toMins(c.wake) - 120) return "evening";
@@ -556,7 +517,7 @@ function carried(list) {
 /* ---------- Rendering ---------- */
 function renderAll() {
   renderHeader(); renderSetup(); renderCheckin(); renderVerse(); renderQuote(); renderArticles();
-  renderTop3(); renderSchedule(); renderTodayItems(); renderLists(); renderLife(); renderSettings();
+  renderTop3(); renderSchedule(); renderTodayItems(); renderLists(); renderSettings();
 }
 
 function renderHeader() {
@@ -692,25 +653,6 @@ function renderLists() {
   const cutoff = addDays(today(), -7);
   const done = S.items.filter((it) => it.done && it.doneOn && it.doneOn >= cutoff).sort((a, b) => b.doneOn.localeCompare(a.doneOn)).slice(0, 12);
   $("#done-items").innerHTML = done.length ? done.map((it) => itemRow(it)).join("") : `<li class="sub" style="padding:6px 0">Finished items from the past week show up here.</li>`;
-}
-
-function renderLife() {
-  const t = today(), days = [6, 5, 4, 3, 2, 1, 0].map((n) => addDays(t, -n));
-  $("#habits").innerHTML = S.habits.length ? S.habits.map((h) => {
-    const log = h.log || {}, streak = (() => { let s = 0, d = t; if (!log[d]) d = addDays(d, -1); while (log[d]) { s++; d = addDays(d, -1); } return s; })();
-    return `<div class="habit"><div><div style="font-weight:600;overflow-wrap:anywhere">${esc(h.name)}</div><div class="sub">${streak ? `${streak}-day streak` : "Start today"}</div></div>
-      <div class="dots">${days.map((d) => `<button class="dot ${log[d] ? "on" : ""}" type="button" data-act="habit" data-id="${h.id}" data-day="${d}" aria-label="${esc(h.name)} on ${d}" aria-pressed="${!!log[d]}">${fmtDate(d, { weekday: "narrow" })}</button>`).join("")}</div>
-      <button class="icon-btn" data-act="habit-del" data-id="${h.id}" type="button" aria-label="Delete habit">✕</button></div>`;
-  }).join("") : `<p class="sub" style="margin:0">No habits yet. Start with one or two, like "Read Scripture" or "Walk 20 minutes".</p>`;
-  const goals = cfg().goals || [];
-  $("#goals").innerHTML = goals.length ? goals.map((g) => `<li class="item"><span>◆</span><span class="txt">${esc(g)}</span><span></span></li>`).join("") : `<li class="sub" style="padding:6px 0">No goals set yet. Add them in Settings.</li>`;
-  const mealsEl = $("#meals");
-  if (!mealsEl.dataset.built) {
-    mealsEl.innerHTML = DAYS.map((d) => `<label for="meal-${d}">${DAY_NAMES[d]}</label><input type="text" id="meal-${d}" data-meal="${d}" placeholder="Dinner idea" autocomplete="off">`).join("");
-    mealsEl.dataset.built = "1";
-  }
-  for (const d of DAYS) { const inp = $("#meal-" + d); if (document.activeElement !== inp) inp.value = S.meals[d] || ""; }
-  const tk = weekdayKey(t); for (const d of DAYS) $(`label[for="meal-${d}"]`).style.color = d === tk ? "var(--accent)" : "";
 }
 
 function renderSettings() {
@@ -895,8 +837,6 @@ function context() {
     `Top 3 today: ${top.join("; ") || "(none chosen)"}.`,
     `Open tasks: ${open.join("; ") || "(none)"}.`,
     `Shopping list: ${shop.join(", ") || "(empty)"}.`,
-    `Habits: ${S.habits.map((h) => `${h.name}${(h.log || {})[t] ? " (done today)" : ""}`).join(", ") || "(none)"}.`,
-    `Meals this week: ${DAYS.map((d) => `${DAY_NAMES[d]}: ${S.meals[d] || "-"}`).join("; ")}.`,
   ].filter(Boolean).join("\n");
 }
 const PERSONA = `You are the assistant inside a personal daily dashboard for a Christian college student. Be supportive, practical and direct. Keep replies short (under 120 words unless asked for more), plain text, no markdown headings. Help them make progress without guilt or information overload. Never claim you can send reminders, notifications or follow up later: you can't. Never invent calendar events; use only the calendar data given. Calendar events are only created when the user taps the confirm button after you call propose_calendar_event. Say "I've suggested it; tap Add to calendar to confirm." Do not quote Scripture unless asked; if you do, use the ESV and give the reference.`;
@@ -922,10 +862,6 @@ function chatTools() {
       execute: async (i) => { if ((dayDoc().top3 || []).length >= 3) throw new Error("Top 3 is already full"); let it = findItem(i.text); const id = it ? it.id : await addItem(String(i.text), "task"); if (!id) throw new Error("could not save"); await toggleTop(id); return "set"; } },
     { name: "complete_item", description: "Mark an open item done by matching its text.", inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
       execute: async (i) => { const it = findItem(i.text); if (!it) throw new Error("No matching open item"); await toggleDone(it.id); return "done: " + it.text; } },
-    { name: "add_habit", description: "Start tracking a new daily habit.", inputSchema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
-      execute: async (i) => { await addHabit(String(i.name)); return "added"; } },
-    { name: "set_meal", description: "Set the dinner plan for a weekday (mon..sun).", inputSchema: { type: "object", properties: { day: { type: "string", enum: DAYS }, meal: { type: "string" } }, required: ["day", "meal"] },
-      execute: async (i) => { if (!DAYS.includes(i.day)) throw new Error("bad day"); await saveMeal(i.day, String(i.meal)); return "saved"; } },
     { name: "propose_calendar_event", description: "Suggest a calendar event. It is NOT created; the user sees a confirm button. Use 24h HH:MM local times and YYYY-MM-DD date.", inputSchema: { type: "object", properties: { summary: { type: "string" }, date: { type: "string" }, start: { type: "string" }, end: { type: "string" } }, required: ["summary", "date", "start", "end"] },
       execute: async (i) => { const sMin = toMins(i.start), eMin = toMins(i.end); if (!/^\d{4}-\d{2}-\d{2}$/.test(String(i.date)) || !(eMin > sMin)) throw new Error("invalid date or time"); if (!S.mcp) throw new Error("Calendar not connected"); S.chat.push({ role: "propose", summary: String(i.summary), date: String(i.date), sMin, eMin }); renderChat(); return "shown to the user for confirmation; not created yet"; } },
   ];
@@ -956,25 +892,9 @@ function renderChat() {
       : `<div class="msg ${m.role}">${esc(m.text)}</div>`).join("");
   }
   $("#chat-send").disabled = S.chatBusy;
-  $("#chat-chips").innerHTML = ["Plan my evening", "Plan meals for this week", "I'm overwhelmed. Help me pick 3 things", "Build a morning routine"].map((c) => `<button class="btn small" type="button" data-chip="${esc(c)}">${esc(c)}</button>`).join("");
+  $("#chat-chips").innerHTML = ["Plan my evening", "I'm overwhelmed. Help me pick 3 things", "Build a morning routine"].map((c) => `<button class="btn small" type="button" data-chip="${esc(c)}">${esc(c)}</button>`).join("");
   el.lastElementChild && el.lastElementChild.scrollIntoView({ block: "nearest" });
 }
-
-/* ---------- Habits & meals ---------- */
-async function addHabit(name) {
-  name = name.trim(); if (!name || !S.db) return;
-  const ref = S.db.collection("habits").doc(); const body = { name, log: {}, ts: Date.now() };
-  S.habits.push({ id: ref.id, ...body }); renderLife(); await ref.set(body).catch(dbFail);
-}
-async function toggleHabit(id, day) {
-  const h = S.habits.find((x) => x.id === id); if (!h) return;
-  const log = { ...(h.log || {}) }; if (log[day]) delete log[day]; else log[day] = true;
-  // Keep the log bounded to roughly the last year.
-  const cutoff = addDays(today(), -400); for (const k of Object.keys(log)) if (k < cutoff) delete log[k];
-  h.log = log; renderLife(); if (S.db) await S.db.doc("habits/" + id).set({ name: h.name, log, ts: h.ts || Date.now() }).catch(dbFail);
-}
-let mealTimer = null;
-async function saveMeal(day, val) { S.meals = { ...S.meals, [day]: val }; renderLife(); if (S.db) await S.db.doc("meals/week").set(S.meals).catch(dbFail); }
 
 /* ---------- Settings ---------- */
 async function saveSettings() {
@@ -989,13 +909,13 @@ async function wipe() {
   const ok = await new Promise((resolve) => {
     $("#modal-root").innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="w-title"><div class="modal">
       <h3 id="w-title">Delete all your dashboard data?</h3>
-      <p class="sub" style="margin:0">This permanently removes your settings, lists, priorities, check-ins, habits, meals and saved articles. Your Google Calendar isn't affected. This can't be undone.</p>
+      <p class="sub" style="margin:0">This permanently removes your settings, lists, priorities, check-ins and saved articles. Your Google Calendar isn't affected. This can't be undone.</p>
       <div class="row"><button class="btn danger" id="w-yes" type="button">Delete everything</button><button class="btn" id="w-no" type="button">Keep my data</button></div></div></div>`;
     $("#w-yes").onclick = () => { $("#modal-root").innerHTML = ""; resolve(true); };
     $("#w-no").onclick = () => { $("#modal-root").innerHTML = ""; resolve(false); };
   });
   if (!ok || !S.db) return;
-  for (const col of ["items", "days", "habits", "meals", "daily", "settings"]) {
+  for (const col of ["items", "days", "daily", "settings"]) {
     const snap = await S.db.collection(col).limit(1000).get().catch(() => null);
     if (snap) for (const d of snap.docs) await S.db.doc(col + "/" + d.id).delete().catch(() => {});
   }
@@ -1034,8 +954,6 @@ document.addEventListener("click", async (e) => {
     case "keep": return patchItem(id, { active: today(), someday: false });
     case "someday": return patchItem(id, { someday: true });
     case "tomorrow": return patchItem(id, { active: addDays(today(), 1), someday: false });
-    case "habit": return toggleHabit(id, t.dataset.day);
-    case "habit-del": { S.habits = S.habits.filter((h) => h.id !== id); renderLife(); if (S.db) await S.db.doc("habits/" + id).delete().catch(dbFail); return; }
     case "save-morning": return saveDay({ morningQ: pick(MORNING_QS, today(), 3), morningA: $("#ci-answer").value.trim() }).then(() => toast("Saved"));
     case "save-evening": return saveDay({ evening: $("#ev-good").value.trim() }).then(() => toast("Review saved. Rest well."));
     case "first": { const v = $("#ev-first").value; if (v.trim()) { await addItem(v, "task", { active: addDays(today(), 1) }); toast("Added for tomorrow"); } return; }
@@ -1048,18 +966,11 @@ document.addEventListener("click", async (e) => {
 $("#plan-btn").addEventListener("click", planDay);
 $("#quick-add").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#quick-add-input"); addItem(i.value, "task"); i.value = ""; });
 $("#list-add").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#list-add-input"); addItem(i.value, S.list); i.value = ""; });
-$("#habit-add").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#habit-add-input"); addHabit(i.value); i.value = ""; });
 $("#chat-form").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#chat-input"); const v = i.value; i.value = ""; sendChat(v); });
 $("#chat-clear").addEventListener("click", () => { S.chat = []; renderChat(); });
 $("#settings-form").addEventListener("submit", (e) => { e.preventDefault(); saveSettings(); });
 $("#wipe-btn").addEventListener("click", wipe);
 $("#perm-btn").addEventListener("click", async () => { try { const p = await claude.use("permissions"); if (p) await p.manage(); else toast("Use the artifact's Permissions menu."); } catch { toast("Use the artifact's Permissions menu."); } });
-$("#meals").addEventListener("input", (e) => { const d = e.target.dataset.meal; if (!d) return; S.meals = { ...S.meals, [d]: e.target.value }; clearTimeout(mealTimer); mealTimer = setTimeout(() => { if (S.db) S.db.doc("meals/week").set(S.meals).catch(dbFail); }, 700); });
-$("#meals-to-shop").addEventListener("click", () => {
-  const meals = DAYS.map((d) => S.meals[d]).filter(Boolean);
-  if (!meals.length) return toast("Add some meals first.");
-  setTab("chat"); sendChat(`Turn this week's meals into a shopping list and add the ingredients to my shopping list: ${meals.join("; ")}`);
-});
 
 /* ---------- Boot ---------- */
 try { const saved = localStorage.getItem("anchor.tab"); if (saved && document.querySelector(`[data-panel="${saved}"]`)) setTab(saved); } catch {}
@@ -1082,8 +993,6 @@ setInterval(() => {
   db.doc("settings/main").onSnapshot((s) => { S.settingsLoaded = true; S.settings = s.exists ? s.data() : null; $("#settings-form").dataset.built = ""; renderAll(); watchCalendar(); }, fail);
   db.collection("items").onSnapshot((s) => { S.items = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderAll(); }, fail);
   db.collection("days").where("date", ">=", addDays(today(), -14)).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
-  db.collection("habits").orderBy("ts").onSnapshot((s) => { S.habits = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderLife(); }, fail);
-  db.doc("meals/week").onSnapshot((s) => { S.meals = s.exists ? { ...s.data() } : {}; renderLife(); }, fail);
   db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); }, fail);
 })();
 })();

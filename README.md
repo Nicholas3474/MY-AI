@@ -8,7 +8,6 @@ A personal daily dashboard that runs inside Claude as a private claude.ai artifa
 
 - **Today:** greeting, morning check-in question or evening review, ESV verse of the day with a separate reflection, a daily quote with an honest attribution label, three commercial real estate reads, top 3 priorities, today's Google Calendar schedule with overlaps and free windows, and today's tasks.
 - **Lists:** tasks, errands, reminders and shopping. Unfinished items carry forward into a short "From earlier" review (five at a time) instead of piling up. "Someday" parks things.
-- **Habits & meals:** 7-day habit check-offs with streaks, goals, and a weekly dinner plan.
 - **Assistant:** chat that can add to your lists, set priorities, plan around your calendar, and *suggest* calendar events. Events are only created after you tap **Add to calendar**.
 - **Settings:** name, time zone, wake and sleep times, energy peak, goals, check-in times, notification preference, plus privacy details and a delete-all button.
 
