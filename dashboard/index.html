@@ -763,7 +763,7 @@ function lastCloseEpoch() {
   const off = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - Math.floor(Date.now() / 60000) * 60000;
   let d = date;
   for (let i = 0; i < 8; i++) {
-    const wd = new Date(d + "T12:00:00Z").getUTCDay(), e = Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), 16, 15) - off;
+    const wd = new Date(d + "T12:00:00Z").getUTCDay(), e = Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), 17, 0) - off;
     if (wd !== 0 && wd !== 6 && e <= Date.now()) return e;
     d = addDays(d, -1);
   }
@@ -773,10 +773,13 @@ function latestTwo(data) { const v = (data || []).filter((x) => x && !isNaN(pars
 let marketBusy = false;
 async function refreshMarket() {
   if (marketBusy || !S.mcp || !S.db || !S.marketLoaded) return;
+  // After a failure, wait an hour before trying again so a bad day can't burn the 25 free requests.
+  try { if (Date.now() < +(localStorage.getItem("anchor.marketBackoff") || 0)) return; } catch {}
   const m = { ...(S.market || {}) }, now = Date.now();
-  const needQuotes = !m.quotesAt || ETFS.some((e) => !(m.quotes || {})[e.sym]) || (marketOpen() ? now - m.quotesAt > 55 * 60000 : m.quotesAt < lastCloseEpoch());
-  const needYields = m.yieldsDay !== localDate();
-  const needFed = !m.fedAt || now - m.fedAt > 7 * 86400000;
+  // The free plan only serves end-of-day prices, so fetch once after each close instead of hourly.
+  const needQuotes = !m.quotesAt || ETFS.some((e) => !(m.quotes || {})[e.sym]) || m.quotesAt < lastCloseEpoch();
+  const needYields = m.yieldsDay !== localDate() || MATURITIES.some(([k]) => !(m.yields || {})[k]);
+  const needFed = !m.fed || !m.fedAt || now - m.fedAt > 7 * 86400000;
   if (!needQuotes && !needYields && !needFed) return;
   marketBusy = true; S.marketErr = null; renderMarket();
   try {
@@ -793,21 +796,29 @@ async function refreshMarket() {
     }
     if (needYields) {
       const yields = {};
-      for (const [k] of MATURITIES) { yields[k] = latestTwo((await av("TREASURY_YIELD", { maturity: k, interval: "daily", datatype: "json" })).data); await sleep(1300); }
-      m.yields = yields; m.yieldsDay = localDate();
+      for (const [k] of MATURITIES) {
+        const prev = (m.yields || {})[k];
+        if (prev && m.yieldsDay === localDate()) { yields[k] = prev; continue; }
+        yields[k] = latestTwo((await av("TREASURY_YIELD", { maturity: k, interval: "daily", datatype: "json" })).data) || prev || null;
+        await sleep(1300);
+      }
+      m.yields = yields;
+      if (MATURITIES.every(([k]) => yields[k])) m.yieldsDay = localDate(); else throw { code: "bad_data" };
       S.market = { ...m }; renderMarket(); await S.db.doc("market/snapshot").set(m).catch(dbFail);
     }
     if (needFed) {
-      m.fed = latestTwo((await av("FEDERAL_FUNDS_RATE", { interval: "daily", datatype: "json" })).data); m.fedAt = Date.now();
+      const fed = latestTwo((await av("FEDERAL_FUNDS_RATE", { interval: "daily", datatype: "json" })).data);
+      if (!fed) throw { code: "bad_data" };
+      m.fed = fed; m.fedAt = Date.now();
       S.market = { ...m }; renderMarket(); await S.db.doc("market/snapshot").set(m).catch(dbFail);
     }
-  } catch (e) { S.marketErr = e || { code: "unknown" }; }
+  } catch (e) { S.marketErr = e || { code: "unknown" }; try { localStorage.setItem("anchor.marketBackoff", String(Date.now() + 60 * 60000)); } catch {} }
   finally { marketBusy = false; renderMarket(); }
 }
 function renderMarket() {
   const el = $("#market"); if (!el) return;
   const m = S.market || {}, open = marketOpen(), err = S.marketErr;
-  $("#market-status").textContent = open ? "Market open" : "Market closed";
+  $("#market-status").textContent = open ? "Market open · last close shown" : "Market closed";
   const sign = (n) => (n > 0 ? "+" : n < 0 ? "−" : "");
   const tiles = ETFS.map((e) => {
     const q = (m.quotes || {})[e.sym];
@@ -832,8 +843,8 @@ function renderMarket() {
     <div class="ticks">${tiles}</div>
     <table class="rates"><thead><tr><th>Rate</th><th class="num">Yield</th><th class="num">Day chg</th></tr></thead><tbody>${rows.join("")}</tbody></table>
     ${errMsg ? `<p class="notice" style="margin:10px 0 0">${esc(errMsg)}</p>` : ""}
-    <p class="hint">${marketBusy ? "Updating… " : ""}${day ? `Prices for ${esc(fmtDate(day, { weekday: "short", month: "short", day: "numeric" }))}` : ""}${m.quotesAt ? `, updated ${new Date(m.quotesAt).toLocaleTimeString("en-US", { timeZone: cfg().tz, hour: "numeric", minute: "2-digit" })}` : ""}${yDate ? ` · Treasuries as of ${esc(fmtDate(yDate, { month: "short", day: "numeric" }))}` : ""}.
-      VOO tracks the S&P 500, QQQ the Nasdaq-100, and VXUS stocks outside the US. Prices refresh about hourly while the market is open and this page is open. Treasury data from Alpha Vantage usually lags a day or two.</p>`;
+    <p class="hint">${marketBusy ? "Updating… " : ""}${day ? `Closing prices from ${esc(fmtDate(day, { weekday: "short", month: "short", day: "numeric" }))}` : ""}${m.quotesAt ? `, updated ${new Date(m.quotesAt).toLocaleTimeString("en-US", { timeZone: cfg().tz, hour: "numeric", minute: "2-digit" })}` : ""}${yDate ? ` · Treasuries as of ${esc(fmtDate(yDate, { month: "short", day: "numeric" }))}` : ""}.
+      VOO tracks the S&P 500, QQQ the Nasdaq-100, and VXUS stocks outside the US. Your free Alpha Vantage plan only provides end-of-day prices (live and 15-minute-delayed quotes need a paid plan), so these update once each evening after the market closes. Treasury data from Alpha Vantage usually lags a day or two.</p>`;
 }
 
 function safeUrl(u) { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:" ? x.href : "#"; } catch { return "#"; } }
