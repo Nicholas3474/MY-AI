@@ -21,6 +21,7 @@ A personal daily dashboard that runs inside Claude as a private claude.ai artifa
 | Verse & quote | Built-in rotation keyed to your local date. Each stays the same all day, and none repeats until the full list has cycled (34 verses, 30 quotes). |
 | CRE articles | A scheduled Claude task ("Daily CRE reads", 5:46 AM Central) searches free-to-read outlets (Connect CRE, CoStar News, CPE, CRE Daily) for US-only stories and saves three links to the artifact. |
 | World briefing | The same morning task saves three world headlines from free outlets (NPR, Axios, CBS News, PBS). WSJ blocks Claude, so the card links straight to WSJ World, Economy and Real Estate instead. |
+| Market snapshot | Read live in the page through your Alpha Vantage connector (free plan: 25 requests/day): VOO, QQQ, VXUS quotes refresh about hourly during market hours while the page is open; 2/10/30-year Treasuries daily; Fed funds weekly. Saved in the artifact so devices share one budget. |
 | Notifications | Off. The page can't notify you by itself; a scheduled task can be added later if you want phone notifications. |
 
 ## Limitations
