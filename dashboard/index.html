@@ -233,6 +233,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
         <div class="card" id="top3-card">
           <h2>Top 3 priorities <span class="act sub" id="top3-count"></span></h2>
           <ol class="top3" id="top3"></ol>
+          <div id="gym"></div>
           <p class="hint">Tap ☆ next to any task to make it one of today's three.</p>
         </div>
         <div class="card" id="schedule-card">
@@ -587,7 +588,6 @@ function renderCheckin() {
           <button class="btn small" data-act="tomorrow" data-id="${it.id}" type="button">Tomorrow</button>
           <button class="btn small" data-act="someday" data-id="${it.id}" type="button">Someday</button>
         </span></li>`).join("")}</ul>${open.length > 6 ? `<p class="hint">+${open.length - 6} more on your Lists tab.</p>` : ""}</div>` : ""}
-      ${isWeekday() ? gymBox(d) : ""}
       <label class="label" for="ev-good" style="margin-top:12px">What went well, and what did you notice of God today?</label>
       <textarea id="ev-good" placeholder="A sentence or two is plenty">${esc($("#ev-good") ? $("#ev-good").value : (d.evening || ""))}</textarea>
       <label class="label" for="ev-first" style="margin-top:10px">First thing tomorrow</label>
@@ -661,6 +661,7 @@ function renderTop3() {
       <button class="icon-btn" data-act="top" data-id="${it.id}" type="button" aria-label="Remove from top 3">✕</button></li>`;
   });
   $("#top3").innerHTML = rows.join("");
+  $("#gym").innerHTML = isWeekday() ? gymBox(dayDoc()) : "";
 }
 
 function itemRow(it, opts = {}) {
@@ -892,7 +893,7 @@ function context() {
     `Shopping list: ${shop.join(", ") || "(empty)"}.`,
   ].filter(Boolean).join("\n");
 }
-const PERSONA = `You are the assistant inside a personal daily dashboard for a Christian college student. Be supportive, practical and direct. Keep replies short (under 120 words unless asked for more), plain text, no markdown headings. Help them make progress without guilt or information overload. Never claim you can send reminders, notifications or follow up later: you can't. Never invent calendar events; use only the calendar data given. Calendar events are only created when the user taps the confirm button after you call propose_calendar_event. Say "I've suggested it; tap Add to calendar to confirm." Weekday gym visits are tracked with an "I went to the gym" checkbox in the evening review, so never create gym tasks or priorities. Do not quote Scripture unless asked; if you do, use the ESV and give the reference.`;
+const PERSONA = `You are the assistant inside a personal daily dashboard for a Christian college student. Be supportive, practical and direct. Keep replies short (under 120 words unless asked for more), plain text, no markdown headings. Help them make progress without guilt or information overload. Never claim you can send reminders, notifications or follow up later: you can't. Never invent calendar events; use only the calendar data given. Calendar events are only created when the user taps the confirm button after you call propose_calendar_event. Say "I've suggested it; tap Add to calendar to confirm." Weekday gym visits are tracked with an "I went to the gym" checkbox on the Today tab, so never create gym tasks or priorities. Do not quote Scripture unless asked; if you do, use the ESV and give the reference.`;
 
 async function planDay() {
   if (!S.sample) { toast("Planning with Claude isn't available in this view."); return; }
