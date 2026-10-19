@@ -86,6 +86,17 @@ nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: 
 .scripture blockquote { margin: 0; font-family: var(--font-read); font-size: clamp(21px, 3.6vw, 26px); line-height: 1.42; }
 .scripture .ref { margin-top: 12px; font-family: var(--font-display); font-size: 19px; color: var(--hero-glow); }
 .scripture .reflect { margin-top: 18px; padding: 14px 16px; border-radius: 12px; background: color-mix(in srgb, var(--hero-ink) 10%, transparent); }
+.prov-ch { font-family: var(--font-display); font-size: clamp(36px, 7vw, 54px); line-height: 1.05; }
+.prov-sub { margin: 6px 0 16px; color: color-mix(in srgb, var(--hero-ink) 80%, transparent); }
+.scripture .btn { text-decoration: none; color: var(--ink); }
+.scripture .label { color: color-mix(in srgb, var(--hero-ink) 75%, transparent); margin-top: 14px; }
+.scripture .gym { background: color-mix(in srgb, var(--hero-ink) 12%, transparent); color: var(--hero-ink); }
+.month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.month span { aspect-ratio: 1; max-width: 100%; display: grid; place-items: center; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; color: var(--muted); }
+.month span.read { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.month span.today { outline: 2px solid var(--gold); outline-offset: 1px; color: var(--ink); }
+.month span.read.today { color: var(--surface); }
+.month span.future { opacity: .5; }
 .scripture .reflect .label { color: color-mix(in srgb, var(--hero-ink) 75%, transparent); }
 .label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .quote { position: relative; overflow: hidden; background: var(--gold-soft); border-color: transparent; }
@@ -198,6 +209,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
     <button role="tab" data-tab="today" aria-selected="true">Today</button>
     <button role="tab" data-tab="lists" aria-selected="false">Lists</button>
     <button role="tab" data-tab="chat" aria-selected="false">Assistant</button>
+    <button role="tab" data-tab="proverbs" aria-selected="false">Proverbs</button>
     <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
   </nav>
 
@@ -312,6 +324,22 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
     </div>
   </section>
 
+  <!-- PROVERBS -->
+  <section data-panel="proverbs" hidden>
+    <div class="grid">
+      <div class="col">
+        <div class="card scripture" id="prov-today"></div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <h2>This month <span class="act sub" id="prov-count"></span></h2>
+          <div class="month" id="prov-month"></div>
+          <p class="hint">One chapter for each day of the month. In months with fewer than 31 days, the last day covers the remaining chapters so you still finish the book.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- SETTINGS -->
   <section data-panel="settings" hidden>
     <div class="grid">
@@ -325,7 +353,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
         <div class="card privacy">
           <h2>Privacy &amp; your data</h2>
           <h3>What's saved</h3>
-          <p>Your settings, tasks and lists, top priorities, check-in answers, and the daily commercial real estate and world news links.</p>
+          <p>Your settings, tasks and lists, top priorities, check-in answers, gym check-offs, your Proverbs reading log and notes, and the daily commercial real estate and world news links.</p>
           <h3>Where it's stored</h3>
           <p>In this artifact's private data store on claude.ai, under your Claude account. Access rules limit it to you (and anyone you explicitly give edit access). It is not in any public code repository.</p>
           <h3>What isn't saved</h3>
@@ -554,7 +582,7 @@ function carried(list) {
 /* ---------- Rendering ---------- */
 function renderAll() {
   renderHeader(); renderSetup(); renderCheckin(); renderVerse(); renderQuote(); renderArticles(); renderWorld();
-  renderTop3(); renderSchedule(); renderTodayItems(); renderLists(); renderSettings();
+  renderTop3(); renderSchedule(); renderTodayItems(); renderLists(); renderProverbs(); renderSettings();
 }
 
 function renderHeader() {
@@ -607,6 +635,31 @@ function gymBox(d) {
   const t = today(), back = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(partsIn(cfg().tz).weekday);
   let n = 0; for (let i = 0; i <= back; i++) if ((S.days[addDays(t, -i)] || {}).gym) n++;
   return `<label class="gym"><input type="checkbox" data-act="gym" ${d.gym ? "checked" : ""}><span>I went to the gym</span><span class="sub">This week: ${n} of 5</span></label>`;
+}
+
+function renderProverbs() {
+  const t = today(), day = +t.slice(8), [y, m] = t.split("-").map(Number);
+  const dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const chapters = day === dim && day < 31 ? Array.from({ length: 32 - day }, (_, i) => day + i) : [day];
+  const label = chapters.length > 1 ? `Proverbs ${chapters[0]}–${chapters[chapters.length - 1]}` : `Proverbs ${day}`;
+  const d = dayDoc(), note = $("#prov-note") ? $("#prov-note").value : (d.proverbsNote || "");
+  $("#prov-today").innerHTML = `<h2>Today's reading</h2>
+    <div class="prov-ch">${label}</div>
+    <p class="prov-sub">${esc(fmtDate(t, { weekday: "long", month: "long", day: "numeric" }))}${chapters.length > 1 ? " · last day of the month, so finish the book today" : ""}</p>
+    <div class="row">${chapters.map((c) => `<a class="btn" href="https://www.esv.org/Proverbs+${c}/" target="_blank" rel="noopener noreferrer">Read Proverbs ${c} (ESV)</a>`).join("")}</div>
+    <label class="gym"><input type="checkbox" data-act="prov-read" ${d.proverbs ? "checked" : ""}><span>I read today's chapter</span></label>
+    <label class="label" for="prov-note">A verse that stood out</label>
+    <textarea id="prov-note" placeholder="Reference and why it stood out, e.g. 16:3 – commit my work">${esc(note)}</textarea>
+    <div class="row" style="margin-top:8px"><button class="btn" data-act="prov-note" type="button">Save note</button>${d.proverbsNote ? `<span class="sub" style="color:inherit;opacity:.8">Saved</span>` : ""}</div>
+    <p class="hint" style="color:inherit;opacity:.75">Chapters open on esv.org, where the full ESV text is free to read.</p>`;
+  const prefix = t.slice(0, 8); let read = 0;
+  $("#prov-month").innerHTML = Array.from({ length: dim }, (_, i) => {
+    const n = i + 1, iso = prefix + String(n).padStart(2, "0"), done = !!(S.days[iso] || {}).proverbs;
+    if (done) read++;
+    const lab = n === dim && dim < 31 ? `${n}–31` : n;
+    return `<span class="${done ? "read" : ""} ${iso === t ? "today" : ""} ${iso > t ? "future" : ""}" title="Proverbs ${lab}">${lab}</span>`;
+  }).join("");
+  $("#prov-count").textContent = `${read} of ${dim} read`;
 }
 
 function renderVerse() {
@@ -1003,6 +1056,8 @@ document.addEventListener("click", async (e) => {
   const id = t.dataset.id;
   switch (t.dataset.act) {
     case "gym": return saveDay({ gym: t.checked });
+    case "prov-read": return saveDay({ proverbs: t.checked });
+    case "prov-note": return saveDay({ proverbsNote: $("#prov-note").value.trim() }).then(() => toast("Saved"));
     case "done": return toggleDone(id);
     case "top": return toggleTop(id);
     case "del": return removeItem(id);
@@ -1047,7 +1102,7 @@ setInterval(() => {
   const fail = () => { S.dbMissing = true; renderBanner(); };
   db.doc("settings/main").onSnapshot((s) => { S.settingsLoaded = true; S.settings = s.exists ? s.data() : null; $("#settings-form").dataset.built = ""; renderAll(); watchCalendar(); }, fail);
   db.collection("items").onSnapshot((s) => { S.items = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderAll(); }, fail);
-  db.collection("days").where("date", ">=", addDays(today(), -14)).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
+  db.collection("days").where("date", ">=", [addDays(today(), -14), today().slice(0, 8) + "01"].sort()[0]).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
   db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); renderWorld(); }, fail);
 })();
 })();
