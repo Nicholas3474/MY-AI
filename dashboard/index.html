@@ -1,0 +1,1090 @@
+<title>Daily Anchor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one calm column on phone, two columns on desktop (today's anchor on the left, the working lists on the right); bottom tab bar on phone. */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --ink: #17242b;
+  --muted: #5d6b70;
+  --line: #dfe5e3;
+  --accent: #1f6f68;
+  --accent-soft: #e2efed;
+  --gold: #9a7420;
+  --gold-soft: #f5eedc;
+  --warn: #a5541b;
+  --warn-soft: #fbeadc;
+  --ok: #2f7a45;
+  --font-read: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-ui: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11181b; --surface: #182126; --ink: #e6ecea; --muted: #9aa8ab; --line: #27333a;
+  --accent: #5cb8ad; --accent-soft: #1c3333; --gold: #d6b25e; --gold-soft: #2b2617;
+  --warn: #e39a62; --warn-soft: #33241a; --ok: #6cc184; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #11181b; --surface: #182126; --ink: #e6ecea; --muted: #9aa8ab; --line: #27333a;
+  --accent: #5cb8ad; --accent-soft: #1c3333; --gold: #d6b25e; --gold-soft: #2b2617;
+  --warn: #e39a62; --warn-soft: #33241a; --ok: #6cc184; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 96px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.greet h1 { font-family: var(--font-read); font-weight: 600; font-size: clamp(26px, 5vw, 34px); line-height: 1.15; }
+.greet .date { color: var(--muted); margin-top: 2px; }
+.mode-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 13px; }
+
+nav.tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+nav.tabs button { border: 0; background: none; padding: 10px 14px; color: var(--muted); font-weight: 600; border-bottom: 2px solid transparent; white-space: nowrap; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+@media (max-width: 700px) {
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; background: var(--surface); border-top: 1px solid var(--line); border-bottom: 0; justify-content: space-around; padding: 4px max(8px, env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+  nav.tabs button { padding: 8px 6px; font-size: 13px; border-bottom: 0; border-top: 2px solid transparent; }
+  nav.tabs button[aria-selected="true"] { border-top-color: var(--accent); }
+}
+
+.grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.col { display: grid; gap: 18px; min-width: 0; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; min-width: 0; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.card h2 .act { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.sub { color: var(--muted); font-size: 13px; }
+.hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+
+.checkin { border-color: var(--accent); background: linear-gradient(0deg, var(--surface), var(--surface)); }
+.checkin .q { font-family: var(--font-read); font-size: 21px; line-height: 1.3; margin-bottom: 10px; }
+
+.scripture { background: var(--gold-soft); border-color: transparent; }
+.scripture blockquote { margin: 0; font-family: var(--font-read); font-size: 21px; line-height: 1.45; }
+.scripture .ref { margin-top: 8px; font-weight: 700; color: var(--gold); }
+.scripture .reflect { margin-top: 14px; padding-top: 12px; border-top: 1px dashed color-mix(in srgb, var(--gold) 45%, transparent); }
+.label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.quote blockquote { margin: 0; font-family: var(--font-read); font-style: italic; font-size: 19px; line-height: 1.4; }
+.quote .who { margin-top: 8px; font-weight: 600; }
+.quote .src { color: var(--muted); font-size: 13px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+.tag.ok { background: var(--accent-soft); color: var(--accent); }
+.tag.unsure { background: var(--warn-soft); color: var(--warn); }
+
+.events { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ev { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ev:last-child { border-bottom: 0; }
+.ev time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; padding-top: 2px; }
+.ev .t { font-weight: 600; overflow-wrap: anywhere; }
+.ev .l { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.ev.past { opacity: .55; }
+.ev.free time { color: var(--accent); }
+.ev.free .t { color: var(--accent); font-weight: 600; }
+.conflict { display: inline-block; margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--warn); background: var(--warn-soft); padding: 1px 8px; border-radius: 999px; }
+details.more { margin-top: 10px; }
+details.more summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 14px; }
+.daygroup { margin-top: 10px; }
+.daygroup h3 { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 7px 12px; font-weight: 600; font-size: 14px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn.small { padding: 3px 9px; font-size: 13px; border-radius: 8px; }
+.btn.link { border: 0; background: none; color: var(--accent); padding: 0; }
+.btn.danger { color: var(--warn); border-color: var(--warn); }
+.btn:disabled { opacity: .5; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+input[type=text], input[type=time], textarea, select { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+textarea { resize: vertical; min-height: 64px; }
+.addrow { display: flex; gap: 8px; }
+.addrow input { flex: 1; min-width: 0; }
+
+.top3 { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.top3 li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--bg); }
+.top3 .n { font-family: var(--font-read); font-size: 20px; color: var(--accent); text-align: center; }
+.top3 .empty { color: var(--muted); }
+
+.items { list-style: none; margin: 0; padding: 0; }
+.item { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.item:last-child { border-bottom: 0; }
+.item input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+.item .txt { overflow-wrap: anywhere; }
+.item.done .txt { text-decoration: line-through; color: var(--muted); }
+.item .ops { display: flex; gap: 2px; }
+.icon-btn { border: 0; background: none; color: var(--muted); padding: 4px 6px; border-radius: 6px; font-size: 15px; line-height: 1; }
+.icon-btn:hover { background: var(--bg); color: var(--ink); }
+.icon-btn.on { color: var(--gold); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-weight: 600; font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.review { background: var(--bg); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.review .item { border-color: var(--surface); }
+
+.articles { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.articles a { font-weight: 600; text-decoration: none; color: var(--ink); }
+.articles a:hover { color: var(--accent); text-decoration: underline; }
+.articles .meta { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.articles p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+
+.habits { display: grid; gap: 10px; }
+.habit { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+.dots { display: flex; gap: 4px; }
+.dot { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); font-size: 10px; color: var(--muted); display: grid; place-items: center; padding: 0; }
+.dot.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.meals { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 6px 10px; align-items: center; }
+.meals label { font-weight: 600; font-size: 13px; color: var(--muted); }
+
+.chat { display: flex; flex-direction: column; gap: 10px; min-height: 360px; }
+.msgs { display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 88%; padding: 10px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.me { align-self: flex-end; background: var(--accent); color: var(--surface); border-bottom-right-radius: 4px; }
+.msg.ai { align-self: flex-start; background: var(--bg); border-bottom-left-radius: 4px; }
+.msg.sys { align-self: center; background: none; color: var(--muted); font-size: 13px; }
+.propose { border: 1px solid var(--accent); border-radius: 12px; padding: 12px; background: var(--accent-soft); align-self: flex-start; max-width: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.plan-out { white-space: pre-wrap; background: var(--bg); border-radius: 10px; padding: 12px; margin-top: 10px; }
+.notice { padding: 10px 12px; border-radius: 10px; background: var(--warn-soft); color: var(--ink); font-size: 14px; }
+.notice.info { background: var(--accent-soft); }
+.form { display: grid; gap: 12px; }
+.form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form label { display: grid; gap: 4px; font-weight: 600; font-size: 13px; }
+@media (max-width: 480px) { .form .two { grid-template-columns: 1fr; } }
+.privacy h3 { font-size: 15px; margin: 14px 0 4px; }
+.privacy p, .privacy li { color: var(--muted); font-size: 14px; }
+.privacy ul { padding-left: 18px; margin: 4px 0; }
+
+.modal-back { position: fixed; inset: 0; background: color-mix(in srgb, var(--ink) 45%, transparent); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.modal { background: var(--surface); border-radius: var(--r); padding: 20px; max-width: 420px; width: 100%; display: grid; gap: 12px; }
+.modal h3 { font-size: 18px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--surface); padding: 9px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; z-index: 60; }
+footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .2s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="greet">
+      <h1 id="greeting">Good morning</h1>
+      <div class="date" id="today-date"></div>
+    </div>
+    <span class="mode-chip" id="mode-chip">Morning check-in</span>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="today" aria-selected="true">Today</button>
+    <button role="tab" data-tab="lists" aria-selected="false">Lists</button>
+    <button role="tab" data-tab="life" aria-selected="false">Habits &amp; meals</button>
+    <button role="tab" data-tab="chat" aria-selected="false">Assistant</button>
+    <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+  </nav>
+
+  <div id="banner"></div>
+
+  <!-- TODAY -->
+  <section data-panel="today">
+    <div class="grid">
+      <div class="col">
+        <div id="setup-card"></div>
+        <div class="card checkin" id="checkin"></div>
+        <div class="card scripture" id="verse"></div>
+        <div class="card quote" id="quote"></div>
+        <div class="card" id="articles-card">
+          <h2>Commercial real estate · today's reads</h2>
+          <div id="articles"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card" id="top3-card">
+          <h2>Top 3 priorities <span class="act sub" id="top3-count"></span></h2>
+          <ol class="top3" id="top3"></ol>
+          <p class="hint">Tap ☆ next to any task to make it one of today's three.</p>
+        </div>
+        <div class="card" id="schedule-card">
+          <h2>Today's schedule <button class="btn small act" id="plan-btn" type="button">Plan my day</button></h2>
+          <div id="schedule"></div>
+          <div id="plan-out"></div>
+        </div>
+        <div class="card">
+          <h2>Today's tasks <button class="btn link act" data-goto="lists" type="button">All lists →</button></h2>
+          <div id="today-review"></div>
+          <ul class="items" id="today-items"></ul>
+          <form class="addrow" id="quick-add" style="margin-top:10px">
+            <input type="text" id="quick-add-input" placeholder="Add a task" aria-label="Add a task" autocomplete="off">
+            <button class="btn" type="submit">Add</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LISTS -->
+  <section data-panel="lists" hidden>
+    <div class="grid">
+      <div class="col">
+        <div class="card">
+          <h2>Lists</h2>
+          <div class="seg" id="list-seg"></div>
+          <div id="list-review"></div>
+          <ul class="items" id="list-items"></ul>
+          <form class="addrow" id="list-add" style="margin-top:10px">
+            <input type="text" id="list-add-input" placeholder="Add an item" aria-label="Add an item" autocomplete="off">
+            <button class="btn" type="submit">Add</button>
+          </form>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <h2>Someday</h2>
+          <ul class="items" id="someday-items"></ul>
+          <p class="hint">Things you parked so today's list stays short. Bring one back whenever you're ready.</p>
+        </div>
+        <div class="card">
+          <h2>Done recently</h2>
+          <ul class="items" id="done-items"></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIFE -->
+  <section data-panel="life" hidden>
+    <div class="grid">
+      <div class="col">
+        <div class="card">
+          <h2>Habits · last 7 days</h2>
+          <div class="habits" id="habits"></div>
+          <form class="addrow" id="habit-add" style="margin-top:12px">
+            <input type="text" id="habit-add-input" placeholder="New habit, e.g. Read Scripture" aria-label="New habit" autocomplete="off">
+            <button class="btn" type="submit">Add</button>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Goals</h2>
+          <ul class="items" id="goals"></ul>
+          <p class="hint">Edit your goals in Settings. The assistant keeps them in mind when it helps you plan.</p>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <h2>Meals this week <button class="btn link act" id="meals-to-shop" type="button">Add to shopping →</button></h2>
+          <div class="meals" id="meals"></div>
+          <p class="hint">Saved as you type. Ask the assistant to plan a week of simple meals or turn them into a shopping list.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHAT -->
+  <section data-panel="chat" hidden>
+    <div class="grid">
+      <div class="col">
+        <div class="card chat">
+          <h2>Assistant <button class="btn link act" id="chat-clear" type="button">Clear</button></h2>
+          <div class="msgs" id="msgs"></div>
+          <div class="chips" id="chat-chips"></div>
+          <form class="addrow" id="chat-form">
+            <input type="text" id="chat-input" placeholder="Ask for help or capture a thought…" aria-label="Message" autocomplete="off">
+            <button class="btn primary" type="submit" id="chat-send">Send</button>
+          </form>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <h2>What the assistant can do here</h2>
+          <ul class="privacy" style="padding-left:18px;margin:0">
+            <li>Add tasks, errands, reminders and shopping items to your lists.</li>
+            <li>Set today's top priorities, add habits, fill in your meal plan.</li>
+            <li>Plan around today's calendar using what this page can see.</li>
+            <li>Suggest a calendar event. Nothing is added until you tap <b>Add to calendar</b>.</li>
+          </ul>
+          <p class="hint">It can't send you reminders or check on you later from here, and it doesn't remember past chats. Your lists are what it remembers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section data-panel="settings" hidden>
+    <div class="grid">
+      <div class="col">
+        <div class="card">
+          <h2>Your details</h2>
+          <form class="form" id="settings-form"></form>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card privacy">
+          <h2>Privacy &amp; your data</h2>
+          <h3>What's saved</h3>
+          <p>Your settings, tasks and lists, top priorities, check-in answers, habits, meal plan, and the daily commercial real estate links.</p>
+          <h3>Where it's stored</h3>
+          <p>In this artifact's private data store on claude.ai, under your Claude account. Access rules limit it to you (and anyone you explicitly give edit access). It is not in any public code repository.</p>
+          <h3>What isn't saved</h3>
+          <ul>
+            <li>Calendar events. They're read live from Google Calendar each time you open the page.</li>
+            <li>Assistant chat messages. They disappear when you reload.</li>
+            <li>Passwords or Google tokens. claude.ai's connector handles sign-in; this page never sees them.</li>
+          </ul>
+          <h3>Limits</h3>
+          <ul>
+            <li>The page only updates while it's open. It doesn't run in the background.</li>
+            <li>The daily articles come from a scheduled morning task in Claude, not from this page.</li>
+            <li id="notif-status">Notifications are off.</li>
+          </ul>
+          <h3>Delete your data</h3>
+          <p>This removes everything listed under "What's saved". Your Google Calendar isn't touched. To remove the dashboard completely, delete the artifact from your claude.ai artifacts list, or ask Claude to.</p>
+          <div class="row" style="margin-top:8px"><button class="btn danger" id="wipe-btn" type="button">Delete all my dashboard data</button></div>
+          <h3>Calendar access</h3>
+          <p>To turn off calendar access for this page, use the artifact's Permissions menu or disconnect Google Calendar in claude.ai Settings → Connectors.</p>
+          <div class="row" style="margin-top:8px"><button class="btn" id="perm-btn" type="button">Manage permissions</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="fine">
+    Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved. Reflections below each verse are written by Claude and are not Scripture.
+  </footer>
+</div>
+<div id="modal-root"></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- Content: verified ESV verses with Claude-written reflections ---------- */
+const VERSES = [
+  { ref: "Proverbs 3:5–6", text: "Trust in the LORD with all your heart, and do not lean on your own understanding. In all your ways acknowledge him, and he will make straight your paths.", reflect: "Before you lock in today's plan, hand it to God in one sentence of prayer. Then hold it loosely when something changes." },
+  { ref: "Philippians 4:6–7", text: "Do not be anxious about anything, but in everything by prayer and supplication with thanksgiving let your requests be made known to God. And the peace of God, which surpasses all understanding, will guard your hearts and your minds in Christ Jesus.", reflect: "Name the one thing you're most anxious about today. Pray about it specifically, and thank God for one thing already going right." },
+  { ref: "Colossians 3:23", text: "Whatever you do, work heartily, as for the Lord and not for men,", reflect: "Pick the least glamorous task on your list and do it with full effort, as an offering rather than a box to tick." },
+  { ref: "Isaiah 40:31", text: "but they who wait for the LORD shall renew their strength; they shall mount up with wings like eagles; they shall run and not be weary; they shall walk and not faint.", reflect: "If your energy is low, build a short pause into a free window today. Use it to rest and pray before you push on." },
+  { ref: "Joshua 1:9", text: "Have I not commanded you? Be strong and courageous. Do not be frightened, and do not be dismayed, for the LORD your God is with you wherever you go.", reflect: "Is there a conversation, application or ask you've been avoiding? Take the first step on it today." },
+  { ref: "Psalm 90:12", text: "So teach us to number our days that we may get a heart of wisdom.", reflect: "Look at your free time today and decide on purpose what it's for, before it decides itself." },
+  { ref: "Matthew 6:33–34", text: "But seek first the kingdom of God and his righteousness, and all these things will be added to you. Therefore do not be anxious about tomorrow, for tomorrow will be anxious for itself. Sufficient for the day is its own trouble.", reflect: "Focus on today's three priorities only. If tomorrow's worries come up, write them down and leave them for tomorrow." },
+  { ref: "Lamentations 3:22–23", text: "The steadfast love of the LORD never ceases; his mercies never come to an end; they are new every morning; great is your faithfulness.", reflect: "Yesterday's unfinished list doesn't define today. Start fresh. Choose what matters and let the rest wait without guilt." },
+  { ref: "Proverbs 16:3", text: "Commit your work to the LORD, and your plans will be established.", reflect: "Before your first class or shift, commit the work ahead to God by name: the exam, the meeting, the project." },
+  { ref: "Proverbs 16:9", text: "The heart of man plans his way, but the LORD establishes his steps.", reflect: "Plan carefully, then treat interruptions today as possible redirections instead of failures." },
+  { ref: "Galatians 6:9", text: "And let us not grow weary of doing good, for in due season we will reap, if we do not give up.", reflect: "Keep going on the habit that feels slow. Mark today's check-in even if it's a small version of it." },
+  { ref: "James 1:5", text: "If any of you lacks wisdom, let him ask God, who gives generously to all without reproach, and it will be given him.", reflect: "Bring one real decision you're stuck on to God today. Then ask one wise person for their view." },
+  { ref: "Micah 6:8", text: "He has told you, O man, what is good; and what does the LORD require of you but to do justice, and to love kindness, and to walk humbly with your God?", reflect: "Look for one chance today to be kind to someone who can't do anything for you." },
+  { ref: "Psalm 46:10", text: "Be still, and know that I am God. I will be exalted among the nations, I will be exalted in the earth!", reflect: "Take five quiet minutes with no phone before your day gets busy." },
+  { ref: "Romans 12:2", text: "Do not be conformed to this world, but be transformed by the renewal of your mind, that by testing you may discern what is the will of God, what is good and acceptable and perfect.", reflect: "Notice what you scroll or listen to today. Swap one input for something that renews your mind." },
+  { ref: "2 Timothy 1:7", text: "for God gave us a spirit not of fear but of power and love and self-control.", reflect: "Self-control is a gift, not just willpower. Ask for it at the moment you're most likely to get distracted today." },
+  { ref: "Psalm 118:24", text: "This is the day that the LORD has made; let us rejoice and be glad in it.", reflect: "Before bed, name one specific good thing from today, however small." },
+  { ref: "Matthew 11:28", text: "Come to me, all who labor and are heavy laden, and I will give you rest.", reflect: "If your list feels heavy, move one item to Someday and give the weight of the rest to Christ in prayer." },
+  { ref: "Ephesians 2:10", text: "For we are his workmanship, created in Christ Jesus for good works, which God prepared beforehand, that we should walk in them.", reflect: "Your classes, job and relationships today are places to do good, not distractions from it." },
+  { ref: "Proverbs 21:5", text: "The plans of the diligent lead surely to abundance, but everyone who is hasty comes only to poverty.", reflect: "Spend ten unhurried minutes planning before you react to messages. Diligence beats rushing." },
+  { ref: "Luke 16:10", text: "One who is faithful in a very little is also faithful in much, and one who is dishonest in a very little is also dishonest in much.", reflect: "Be faithful in one small thing today: show up on time, follow up as promised, or finish the minor task." },
+  { ref: "1 Corinthians 10:31", text: "So, whether you eat or drink, or whatever you do, do all to the glory of God.", reflect: "Pick an ordinary moment today, like a meal, a commute or a shift, and do it gratefully and on purpose." },
+  { ref: "Psalm 37:5", text: "Commit your way to the LORD; trust in him, and he will act.", reflect: "Write down one outcome you're trying to control. Do your part today and trust God with the rest." },
+  { ref: "Philippians 4:13", text: "I can do all things through him who strengthens me.", reflect: "In context, Paul is talking about contentment in plenty and in need. Ask for strength to be content with today's circumstances." },
+  { ref: "1 Peter 5:7", text: "casting all your anxieties on him, because he cares for you.", reflect: "When a worry comes back today, use it as a cue to pray instead of replaying it." },
+  { ref: "Psalm 143:8", text: "Let me hear in the morning of your steadfast love, for in you I trust. Make me know the way I should go, for to you I lift up my soul.", reflect: "Start with this verse as your own prayer, then look at your schedule." },
+  { ref: "Ecclesiastes 9:10", text: "Whatever your hand finds to do, do it with your might, for there is no work or thought or knowledge or wisdom in Sheol, to which you are going.", reflect: "Give your full attention to whatever is in front of you right now, then move to the next thing." },
+  { ref: "John 15:5", text: "I am the vine; you are the branches. Whoever abides in me and I in him, he it is that bears much fruit, for apart from me you can do nothing.", reflect: "Productivity starts with staying connected to Christ. Protect your time in prayer and Scripture first." },
+  { ref: "Proverbs 4:23", text: "Keep your heart with all vigilance, for from it flow the springs of life.", reflect: "Guard your attention today. Decide in advance when you'll check your phone." },
+  { ref: "Psalm 5:3", text: "O LORD, in the morning you hear my voice; in the morning I prepare a sacrifice for you and watch.", reflect: "Pray about your day this morning, then watch for how God answers through it." },
+  { ref: "Romans 8:28", text: "And we know that for those who love God all things work together for good, for those who are called according to his purpose.", reflect: "If something goes wrong today, ask \"What could God be shaping in me here?\" before you ask \"Why me?\"" },
+  { ref: "Proverbs 27:23", text: "Know well the condition of your flocks, and give attention to your herds,", reflect: "Good stewardship means knowing the details. Review one account, budget or deal file closely today." },
+  { ref: "Luke 14:28", text: "For which of you, desiring to build a tower, does not first sit down and count the cost, whether he has enough to complete it?", reflect: "Before you say yes to something new this week, count the real cost in hours and energy." },
+  { ref: "Isaiah 26:3", text: "You keep him in perfect peace whose mind is stayed on you, because he trusts in you.", reflect: "When your mind races between tasks today, pause and bring it back to God, then to the next single step." },
+];
+
+/* Quotes: status "ok" = attribution checked against a primary or well-documented source; "unsure" = disputed or unconfirmed. */
+const QUOTES = [
+  { text: "Well done is better than well said.", who: "Benjamin Franklin", src: "Poor Richard's Almanack, 1737", status: "ok" },
+  { text: "Lost time is never found again.", who: "Benjamin Franklin", src: "Poor Richard's Almanack, 1748", status: "ok" },
+  { text: "Diligence is the mother of good luck.", who: "Benjamin Franklin", src: "Poor Richard's Almanack, 1736", status: "ok" },
+  { text: "Little strokes fell great oaks.", who: "Benjamin Franklin", src: "Poor Richard's Almanack, 1750", status: "ok" },
+  { text: "How we spend our days is, of course, how we spend our lives.", who: "Annie Dillard", src: "The Writing Life, 1989", status: "ok" },
+  { text: "It is not that we have a short time to live, but that we waste a lot of it.", who: "Seneca", src: "On the Shortness of Life (translated)", status: "ok" },
+  { text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.", who: "Will Durant", src: "The Story of Philosophy, 1926, summarizing Aristotle. Often credited to Aristotle himself, but the wording is Durant's.", status: "ok" },
+  { text: "The impediment to action advances action. What stands in the way becomes the way.", who: "Marcus Aurelius", src: "Meditations 5.20 (Gregory Hays translation)", status: "ok" },
+  { text: "Waste no more time arguing about what a good man should be. Be one.", who: "Marcus Aurelius", src: "Meditations 10.16 (translated)", status: "ok" },
+  { text: "First say to yourself what you would be; and then do what you have to do.", who: "Epictetus", src: "Discourses 3.23 (translated)", status: "ok" },
+  { text: "Courage is not simply one of the virtues, but the form of every virtue at the testing point.", who: "C. S. Lewis", src: "The Screwtape Letters, 1942", status: "ok" },
+  { text: "He is no fool who gives what he cannot keep to gain that which he cannot lose.", who: "Jim Elliot", src: "Journal entry, October 28, 1949", status: "ok" },
+  { text: "Only one life, 'twill soon be past, only what's done for Christ will last.", who: "C. T. Studd", src: "From his poem \"Only One Life\"", status: "ok" },
+  { text: "Do not pray for easy lives. Pray to be stronger men.", who: "Phillips Brooks", src: "Sermon, \"Going Up to Jerusalem\"", status: "ok" },
+  { text: "Plans are worthless, but planning is everything.", who: "Dwight D. Eisenhower", src: "Speech, November 14, 1957", status: "ok" },
+  { text: "Price is what you pay; value is what you get.", who: "Warren Buffett", src: "2008 Berkshire Hathaway shareholder letter, crediting Benjamin Graham", status: "ok" },
+  { text: "Hard work beats talent when talent doesn't work hard.", who: "Tim Notke", src: "High school basketball coach; later popularized by Kevin Durant", status: "ok" },
+  { text: "Well begun is half done.", who: "Ancient Greek proverb", src: "Quoted by Aristotle in Politics", status: "ok" },
+  { text: "Expect great things from God; attempt great things for God.", who: "William Carey", src: "Summary of his 1792 sermon. The exact wording comes from later reports.", status: "unsure" },
+  { text: "Never be afraid to trust an unknown future to a known God.", who: "Attributed to Corrie ten Boom", src: "Widely attributed; original source not confirmed", status: "unsure" },
+  { text: "Do the next thing.", who: "Elisabeth Elliot", src: "She often quoted it from an older anonymous poem, \"Doe the Nexte Thynge\"", status: "ok" },
+  { text: "The best time to plant a tree was 20 years ago. The second best time is now.", who: "Proverb", src: "Origin uncertain", status: "unsure" },
+  { text: "Nothing in the world can take the place of persistence.", who: "Attributed to Calvin Coolidge", src: "No confirmed source", status: "unsure" },
+  { text: "It always seems impossible until it's done.", who: "Attributed to Nelson Mandela", src: "No confirmed source", status: "unsure" },
+  { text: "Buy land, they're not making it anymore.", who: "Attributed to Mark Twain", src: "No confirmed source", status: "unsure" },
+  { text: "Pray as though everything depended on God. Work as though everything depended on you.", who: "Often attributed to Augustine", src: "Not found in his writings; origin uncertain", status: "unsure" },
+  { text: "If you want to go fast, go alone. If you want to go far, go together.", who: "Proverb", src: "Origin uncertain", status: "unsure" },
+  { text: "Opportunity is missed by most people because it is dressed in overalls and looks like work.", who: "Attributed to Thomas Edison", src: "No confirmed source", status: "unsure" },
+  { text: "You can't go back and change the beginning, but you can start where you are and change the ending.", who: "Often attributed to C. S. Lewis", src: "Not found in his writings; likely from James R. Sherman", status: "unsure" },
+  { text: "The way to get started is to quit talking and begin doing.", who: "Attributed to Walt Disney", src: "No confirmed source", status: "unsure" },
+];
+
+const MORNING_QS = [
+  "What's the one thing that would make today a win?",
+  "Where do you most need God's help today?",
+  "What's most likely to pull you off track today, and how will you handle it?",
+  "Who could you encourage today?",
+  "What's one thing you can let go of today?",
+  "When is your best block of focus today, and what's it for?",
+  "What are you grateful for this morning?",
+];
+
+const LISTS = [
+  { id: "task", name: "Tasks", carry: true },
+  { id: "errand", name: "Errands", carry: true },
+  { id: "reminder", name: "Reminders", carry: true },
+  { id: "shopping", name: "Shopping", carry: false },
+];
+const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_NAMES = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+const CAL = "Google Calendar";
+const DEFAULTS = { name: "", tz: "America/Chicago", wake: "06:30", sleep: "22:30", energy: "morning", goals: [], morning: "07:00", evening: "20:30", notify: "off", translation: "ESV" };
+
+/* ---------- State ---------- */
+const S = {
+  settings: null, settingsLoaded: false,
+  items: [], days: {}, habits: [], meals: {}, daily: null,
+  events: null, calError: null, calStamp: null,
+  tab: "today", list: "task",
+  db: null, mcp: null, sample: null,
+  chat: [], chatBusy: false, planBusy: false,
+};
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const cfg = () => ({ ...DEFAULTS, ...(S.settings || {}) });
+
+/* ---------- Time helpers (always in the user's chosen time zone) ---------- */
+function partsIn(tz, d = new Date()) {
+  const p = {};
+  for (const x of new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", weekday: "short" }).formatToParts(d)) p[x.type] = x.value;
+  return p;
+}
+function localDate(d = new Date()) { const p = partsIn(cfg().tz, d); return `${p.year}-${p.month}-${p.day}`; }
+function localMinutes(d = new Date()) { const p = partsIn(cfg().tz, d); return (+p.hour) * 60 + (+p.minute); }
+function addDays(iso, n) { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function dayNumber(iso) { return Math.floor(Date.parse(iso + "T00:00:00Z") / 86400000); }
+function hm(mins) { const h = Math.floor(mins / 60), m = mins % 60; const ap = h >= 12 ? "pm" : "am"; const hh = ((h + 11) % 12) + 1; return m ? `${hh}:${String(m).padStart(2, "0")}${ap}` : `${hh}${ap}`; }
+function toMins(t) { const [h, m] = String(t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); }
+function fmtDate(iso, opts) { return new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", ...opts }); }
+function weekdayKey(iso) { return DAYS[(new Date(iso + "T12:00:00Z").getUTCDay() + 6) % 7]; }
+function mode() {
+  const m = localMinutes(), c = cfg();
+  if (m >= toMins(c.evening) - 60 || m < toMins(c.wake) - 120) return "evening";
+  if (m < 12 * 60) return "morning";
+  return "day";
+}
+
+/* ---------- Daily content rotation ---------- */
+function pick(arr, iso, salt) {
+  // Stride through the list so consecutive days differ, and nothing repeats until the whole list has been shown.
+  const n = arr.length, stride = salt % n || 1;
+  let g = stride; while (gcd(g, n) !== 1) g++;
+  return arr[((dayNumber(iso) * g) % n + n) % n];
+}
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+
+/* ---------- Data ---------- */
+function today() { return localDate(); }
+function dayDoc() { return S.days[today()] || {}; }
+async function saveDay(patch) {
+  const id = today(), cur = S.days[id] || {};
+  const next = { ...cur, ...patch, date: id };
+  S.days[id] = next; renderAll();
+  if (S.db) await S.db.doc("days/" + id).set(next).catch(dbFail);
+}
+function dbFail(e) { toast(e && e.code === "quota_exceeded" ? "Storage is full. Delete some old items." : "Couldn't save. Check your connection."); }
+
+async function addItem(text, list = "task", extra = {}) {
+  text = String(text || "").trim(); if (!text) return null;
+  const now = today();
+  const body = { text, list, done: false, created: now, active: now, someday: false, doneOn: null, ts: Date.now(), ...extra };
+  if (!S.db) { toast("Saving isn't available right now."); return null; }
+  const ref = S.db.collection("items").doc();
+  S.items.push({ id: ref.id, ...body }); renderAll();
+  await ref.set(body).catch(dbFail);
+  return ref.id;
+}
+async function patchItem(id, patch) {
+  const it = S.items.find((x) => x.id === id); if (!it) return;
+  Object.assign(it, patch); renderAll();
+  if (S.db) await S.db.doc("items/" + id).update(patch).catch(dbFail);
+}
+async function removeItem(id) {
+  S.items = S.items.filter((x) => x.id !== id);
+  const d = dayDoc(); if ((d.top3 || []).includes(id)) await saveDay({ top3: d.top3.filter((x) => x !== id) });
+  renderAll();
+  if (S.db) await S.db.doc("items/" + id).delete().catch(dbFail);
+}
+async function toggleDone(id) {
+  const it = S.items.find((x) => x.id === id); if (!it) return;
+  await patchItem(id, it.done ? { done: false, doneOn: null } : { done: true, doneOn: today() });
+}
+async function toggleTop(id) {
+  const d = dayDoc(); let top = [...(d.top3 || [])];
+  if (top.includes(id)) top = top.filter((x) => x !== id);
+  else { if (top.length >= 3) { toast("You already have three. Remove one first."); return; } top.push(id); }
+  const it = S.items.find((x) => x.id === id);
+  if (it && it.active !== today()) await patchItem(id, { active: today(), someday: false });
+  await saveDay({ top3: top });
+}
+
+const isCarry = (it) => LISTS.find((l) => l.id === it.list)?.carry;
+function todaysItems(list) {
+  const t = today();
+  return S.items.filter((it) => it.list === list && !it.someday && (list === "shopping" ? (!it.done || it.doneOn === t) : (it.done ? it.doneOn === t : it.active >= t)))
+    .sort((a, b) => (a.done - b.done) || (a.ts - b.ts));
+}
+function carried(list) {
+  const t = today();
+  return S.items.filter((it) => (list ? it.list === list : isCarry(it)) && isCarry(it) && !it.done && !it.someday && it.active < t).sort((a, b) => a.ts - b.ts);
+}
+
+/* ---------- Rendering ---------- */
+function renderAll() {
+  renderHeader(); renderSetup(); renderCheckin(); renderVerse(); renderQuote(); renderArticles();
+  renderTop3(); renderSchedule(); renderTodayItems(); renderLists(); renderLife(); renderSettings();
+}
+
+function renderHeader() {
+  const c = cfg(), m = localMinutes(), name = c.name ? `, ${c.name}` : "";
+  const part = m < 12 * 60 ? "Good morning" : m < 17 * 60 ? "Good afternoon" : "Good evening";
+  $("#greeting").textContent = part + name;
+  $("#today-date").textContent = fmtDate(today(), { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const md = mode();
+  $("#mode-chip").textContent = md === "morning" ? "Morning check-in" : md === "evening" ? "Evening review" : "Midday";
+}
+
+function renderSetup() {
+  const el = $("#setup-card");
+  if (!S.settingsLoaded || S.settings) { el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="card checkin"><h2>Welcome. Two minutes of setup</h2>
+    <p style="margin:0 0 10px">Tell me a little about your day so the dashboard can plan around it. You can change any of this later in Settings.</p>
+    <button class="btn primary" type="button" data-goto="settings">Set up my dashboard</button></div>`;
+}
+
+function renderCheckin() {
+  const el = $("#checkin"), d = dayDoc(), md = mode();
+  if (md === "evening") {
+    const t = today();
+    const done = S.items.filter((it) => it.done && it.doneOn === t);
+    const open = S.items.filter((it) => isCarry(it) && !it.done && !it.someday && it.active <= t);
+    el.innerHTML = `<h2>Evening review</h2>
+      <p class="q">${done.length ? `You finished ${done.length} thing${done.length > 1 ? "s" : ""} today.` : "Today counts, even if the list didn't move much."}</p>
+      ${done.length ? `<ul class="items">${done.slice(0, 6).map((it) => `<li class="item done"><span>✓</span><span class="txt">${esc(it.text)}</span><span></span></li>`).join("")}</ul>` : ""}
+      ${open.length ? `<div style="margin-top:12px"><span class="label">Still open: move each one</span><ul class="items">${open.slice(0, 6).map((it) => `
+        <li class="item"><span>•</span><span class="txt">${esc(it.text)}</span><span class="ops">
+          <button class="btn small" data-act="tomorrow" data-id="${it.id}" type="button">Tomorrow</button>
+          <button class="btn small" data-act="someday" data-id="${it.id}" type="button">Someday</button>
+        </span></li>`).join("")}</ul>${open.length > 6 ? `<p class="hint">+${open.length - 6} more on your Lists tab.</p>` : ""}</div>` : ""}
+      <label class="label" for="ev-good" style="margin-top:12px">What went well, and what did you notice of God today?</label>
+      <textarea id="ev-good" placeholder="A sentence or two is plenty">${esc(d.evening || "")}</textarea>
+      <label class="label" for="ev-first" style="margin-top:10px">First thing tomorrow</label>
+      <div class="addrow"><input type="text" id="ev-first" placeholder="e.g. Finish FINC 351 problem set" autocomplete="off"><button class="btn" data-act="first" type="button">Add for tomorrow</button></div>
+      <div class="row" style="margin-top:10px"><button class="btn primary" data-act="save-evening" type="button">Save review</button>${d.evening ? `<span class="sub">Saved</span>` : ""}</div>`;
+    return;
+  }
+  const q = d.morningQ || pick(MORNING_QS, today(), 3);
+  el.innerHTML = `<h2>${md === "morning" ? "Morning check-in" : "Check-in"}</h2>
+    <p class="q">${esc(q)}</p>
+    <textarea id="ci-answer" placeholder="Your answer">${esc(d.morningA || "")}</textarea>
+    <div class="row" style="margin-top:8px"><button class="btn primary" data-act="save-morning" type="button">Save</button>${d.morningA ? `<span class="sub">Saved. You can come back to this tonight.</span>` : ""}</div>`;
+}
+
+function renderVerse() {
+  const v = pick(VERSES, today(), 7);
+  $("#verse").innerHTML = `<h2>Verse of the day</h2>
+    <blockquote>“${esc(v.text)}”</blockquote>
+    <div class="ref">${esc(v.ref)} · ESV</div>
+    <div class="reflect"><span class="label">Reflection · not Scripture</span><div>${esc(v.reflect)}</div></div>`;
+}
+
+function renderQuote() {
+  const q = pick(QUOTES, today(), 11);
+  $("#quote").innerHTML = `<h2>Today's quote</h2>
+    <blockquote>“${esc(q.text)}”</blockquote>
+    <div class="who">${esc(q.who)}<span class="tag ${q.status === "ok" ? "ok" : "unsure"}">${q.status === "ok" ? "Source checked" : "Attribution uncertain"}</span></div>
+    <div class="src">${esc(q.src)}</div>`;
+}
+
+function renderArticles() {
+  const el = $("#articles"), d = S.daily;
+  if (!S.db) { el.innerHTML = `<p class="sub">Articles load from your saved data, which isn't available in this view.</p>`; return; }
+  if (!d || !Array.isArray(d.articles) || !d.articles.length) {
+    el.innerHTML = `<p class="sub" style="margin:0">Each morning a scheduled Claude task picks three articles from established sources and saves them here. None have been saved yet.</p>`;
+    return;
+  }
+  const stale = d.date !== today();
+  el.innerHTML = `${stale ? `<p class="notice" style="margin:0 0 12px">These are from ${esc(fmtDate(d.date, { weekday: "long", month: "short", day: "numeric" }))}. Today's haven't arrived yet.</p>` : ""}
+    <ol class="articles">${d.articles.slice(0, 3).map((a) => `<li>
+      <div class="meta">${esc(a.source || "")}${a.published ? " · " + esc(a.published) : ""}</div>
+      <a href="${esc(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${esc(a.title)}</a>
+      ${a.why ? `<p>${esc(a.why)}</p>` : ""}</li>`).join("")}</ol>`;
+}
+function safeUrl(u) { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:" ? x.href : "#"; } catch { return "#"; } }
+
+function renderTop3() {
+  const top = (dayDoc().top3 || []).map((id) => S.items.find((x) => x.id === id)).filter(Boolean);
+  $("#top3-count").textContent = `${top.filter((t) => t.done).length}/${top.length || 3} done`;
+  const rows = [0, 1, 2].map((i) => {
+    const it = top[i];
+    if (!it) return `<li><span class="n">${i + 1}</span><span class="empty">Not chosen yet</span><span></span></li>`;
+    return `<li class="${it.done ? "done" : ""}"><span class="n">${i + 1}</span>
+      <label class="row" style="gap:8px;flex-wrap:nowrap;min-width:0"><input type="checkbox" data-act="done" data-id="${it.id}" ${it.done ? "checked" : ""} aria-label="Mark done"><span class="txt" style="${it.done ? "text-decoration:line-through;color:var(--muted)" : ""}">${esc(it.text)}</span></label>
+      <button class="icon-btn" data-act="top" data-id="${it.id}" type="button" aria-label="Remove from top 3">✕</button></li>`;
+  });
+  $("#top3").innerHTML = rows.join("");
+}
+
+function itemRow(it, opts = {}) {
+  const top = (dayDoc().top3 || []).includes(it.id);
+  return `<li class="item ${it.done ? "done" : ""}">
+    <input type="checkbox" data-act="done" data-id="${it.id}" ${it.done ? "checked" : ""} aria-label="Mark done">
+    <span class="txt">${esc(it.text)}</span>
+    <span class="ops">
+      ${opts.review ? `<button class="btn small" data-act="keep" data-id="${it.id}" type="button">Today</button><button class="btn small" data-act="someday" data-id="${it.id}" type="button">Someday</button>` : ""}
+      ${opts.someday ? `<button class="btn small" data-act="keep" data-id="${it.id}" type="button">Bring back</button>` : ""}
+      ${!opts.review && !opts.someday && isCarry(it) && !it.done ? `<button class="icon-btn ${top ? "on" : ""}" data-act="top" data-id="${it.id}" type="button" aria-label="${top ? "Remove from" : "Add to"} top 3">${top ? "★" : "☆"}</button>` : ""}
+      <button class="icon-btn" data-act="del" data-id="${it.id}" type="button" aria-label="Delete">✕</button>
+    </span></li>`;
+}
+
+function reviewBlock(list) {
+  const c = carried(list); if (!c.length) return "";
+  const show = c.slice(0, 5);
+  return `<div class="review"><span class="label">From earlier · ${c.length} to review</span>
+    <ul class="items">${show.map((it) => itemRow(it, { review: true })).join("")}</ul>
+    ${c.length > 5 ? `<p class="hint">Showing the oldest 5. The rest will wait their turn.</p>` : ""}</div>`;
+}
+
+function renderTodayItems() {
+  const t = today();
+  const items = S.items.filter((it) => isCarry(it) && !it.someday && (it.done ? it.doneOn === t : it.active === t)).sort((a, b) => (a.done - b.done) || (a.ts - b.ts));
+  $("#today-review").innerHTML = reviewBlock(null);
+  $("#today-items").innerHTML = items.length ? items.map((it) => itemRow(it)).join("") : `<li class="sub" style="padding:6px 0">Nothing on today's list yet.</li>`;
+}
+
+function renderLists() {
+  $("#list-seg").innerHTML = LISTS.map((l) => {
+    const n = l.carry ? S.items.filter((it) => it.list === l.id && !it.done && !it.someday).length : S.items.filter((it) => it.list === l.id && !it.done).length;
+    return `<button type="button" data-list="${l.id}" aria-pressed="${S.list === l.id}">${l.name}${n ? ` · ${n}` : ""}</button>`;
+  }).join("");
+  const cur = LISTS.find((l) => l.id === S.list);
+  $("#list-review").innerHTML = cur.carry ? reviewBlock(S.list) : "";
+  const items = todaysItems(S.list);
+  $("#list-items").innerHTML = items.length ? items.map((it) => itemRow(it)).join("") : `<li class="sub" style="padding:6px 0">Empty. Add something below, or capture it from the Assistant tab.</li>`;
+  $("#list-add-input").placeholder = `Add to ${cur.name.toLowerCase()}`;
+  const some = S.items.filter((it) => it.someday && !it.done);
+  $("#someday-items").innerHTML = some.length ? some.map((it) => itemRow(it, { someday: true })).join("") : `<li class="sub" style="padding:6px 0">Nothing parked.</li>`;
+  const cutoff = addDays(today(), -7);
+  const done = S.items.filter((it) => it.done && it.doneOn && it.doneOn >= cutoff).sort((a, b) => b.doneOn.localeCompare(a.doneOn)).slice(0, 12);
+  $("#done-items").innerHTML = done.length ? done.map((it) => itemRow(it)).join("") : `<li class="sub" style="padding:6px 0">Finished items from the past week show up here.</li>`;
+}
+
+function renderLife() {
+  const t = today(), days = [6, 5, 4, 3, 2, 1, 0].map((n) => addDays(t, -n));
+  $("#habits").innerHTML = S.habits.length ? S.habits.map((h) => {
+    const log = h.log || {}, streak = (() => { let s = 0, d = t; if (!log[d]) d = addDays(d, -1); while (log[d]) { s++; d = addDays(d, -1); } return s; })();
+    return `<div class="habit"><div><div style="font-weight:600;overflow-wrap:anywhere">${esc(h.name)}</div><div class="sub">${streak ? `${streak}-day streak` : "Start today"}</div></div>
+      <div class="dots">${days.map((d) => `<button class="dot ${log[d] ? "on" : ""}" type="button" data-act="habit" data-id="${h.id}" data-day="${d}" aria-label="${esc(h.name)} on ${d}" aria-pressed="${!!log[d]}">${fmtDate(d, { weekday: "narrow" })}</button>`).join("")}</div>
+      <button class="icon-btn" data-act="habit-del" data-id="${h.id}" type="button" aria-label="Delete habit">✕</button></div>`;
+  }).join("") : `<p class="sub" style="margin:0">No habits yet. Start with one or two, like "Read Scripture" or "Walk 20 minutes".</p>`;
+  const goals = cfg().goals || [];
+  $("#goals").innerHTML = goals.length ? goals.map((g) => `<li class="item"><span>◆</span><span class="txt">${esc(g)}</span><span></span></li>`).join("") : `<li class="sub" style="padding:6px 0">No goals set yet. Add them in Settings.</li>`;
+  const mealsEl = $("#meals");
+  if (!mealsEl.dataset.built) {
+    mealsEl.innerHTML = DAYS.map((d) => `<label for="meal-${d}">${DAY_NAMES[d]}</label><input type="text" id="meal-${d}" data-meal="${d}" placeholder="Dinner idea" autocomplete="off">`).join("");
+    mealsEl.dataset.built = "1";
+  }
+  for (const d of DAYS) { const inp = $("#meal-" + d); if (document.activeElement !== inp) inp.value = S.meals[d] || ""; }
+  const tk = weekdayKey(t); for (const d of DAYS) $(`label[for="meal-${d}"]`).style.color = d === tk ? "var(--accent)" : "";
+}
+
+function renderSettings() {
+  const f = $("#settings-form"), c = cfg();
+  $("#notif-status").textContent = c.notify === "want" ? "You've asked for notifications. They only work once Claude has set up the scheduled task, so mention it in chat if you haven't." : "Notifications are off. Nothing will remind you unless you turn them on with Claude.";
+  if (f.dataset.built) return;
+  f.dataset.built = "1";
+  f.innerHTML = `
+    <label>Preferred name<input type="text" id="set-name" value="${esc(c.name)}" placeholder="What should I call you?" autocomplete="off"></label>
+    <label>Time zone<select id="set-tz">${tzOptions(c.tz)}</select></label>
+    <div class="two">
+      <label>Usual wake time<input type="time" id="set-wake" value="${esc(c.wake)}"></label>
+      <label>Usual sleep time<input type="time" id="set-sleep" value="${esc(c.sleep)}"></label>
+    </div>
+    <label>When is your energy best?<select id="set-energy">
+      ${["morning", "afternoon", "evening"].map((x) => `<option value="${x}" ${c.energy === x ? "selected" : ""}>${x[0].toUpperCase() + x.slice(1)}</option>`).join("")}</select></label>
+    <label>Main goals (one per line)<textarea id="set-goals" placeholder="e.g. Grow in daily prayer&#10;Land a CRE internship&#10;Finish the semester strong">${esc((c.goals || []).join("\n"))}</textarea></label>
+    <label>Bible translation<input type="text" value="English Standard Version (ESV)" disabled></label>
+    <div class="two">
+      <label>Morning check-in time<input type="time" id="set-morning" value="${esc(c.morning)}"></label>
+      <label>Evening review time<input type="time" id="set-evening" value="${esc(c.evening)}"></label>
+    </div>
+    <label>Notifications<select id="set-notify">
+      <option value="off" ${c.notify === "off" ? "selected" : ""}>Off: I'll open the dashboard myself</option>
+      <option value="want" ${c.notify === "want" ? "selected" : ""}>I'd like phone notifications at these times</option></select></label>
+    <p class="hint" style="margin:0">This page can't send notifications by itself. If you choose notifications, tell Claude in chat and it can set up a scheduled task that sends a phone notification from the Claude app at your check-in times.</p>
+    <div class="row"><button class="btn primary" type="submit">Save settings</button></div>`;
+}
+function tzOptions(cur) {
+  let zones = ["America/Chicago", "America/New_York", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage", "Pacific/Honolulu"];
+  try { const all = Intl.supportedValuesOf("timeZone"); if (all.length) zones = all; } catch {}
+  if (!zones.includes(cur)) zones = [cur, ...zones];
+  return zones.map((z) => `<option ${z === cur ? "selected" : ""}>${esc(z)}</option>`).join("");
+}
+
+/* ---------- Calendar ---------- */
+function parseEvents(payload) {
+  const list = (payload && Array.isArray(payload.events)) ? payload.events : [];
+  return list.filter((e) => e.status !== "cancelled").map((e) => {
+    const allDay = !!(e.start && e.start.date && !e.start.dateTime);
+    const s = allDay ? null : new Date(e.start.dateTime), en = allDay ? null : new Date(e.end.dateTime);
+    return { id: e.id, title: e.summary || "(No title)", location: e.location || "", link: e.htmlLink, allDay,
+      date: allDay ? e.start.date : localDate(s), endDate: allDay ? (e.end && e.end.date) : localDate(en),
+      sMin: allDay ? 0 : localMinutes(s), eMin: allDay ? 1440 : (localDate(en) !== localDate(s) ? 1440 : localMinutes(en)), start: s, end: en };
+  }).sort((a, b) => (a.date.localeCompare(b.date)) || (a.allDay ? -1 : b.allDay ? 1 : a.sMin - b.sMin));
+}
+function eventsOn(iso) { return (S.events || []).filter((e) => e.allDay ? (e.date <= iso && (e.endDate || e.date) > iso) : e.date === iso); }
+function conflictsOf(evs) {
+  const timed = evs.filter((e) => !e.allDay), out = new Set();
+  for (let i = 0; i < timed.length; i++) for (let j = i + 1; j < timed.length; j++)
+    if (timed[i].sMin < timed[j].eMin && timed[j].sMin < timed[i].eMin) { out.add(timed[i].id); out.add(timed[j].id); }
+  return out;
+}
+function freeWindows(iso) {
+  const c = cfg(), isToday = iso === today();
+  let from = toMins(c.wake); const to = toMins(c.sleep) > from ? toMins(c.sleep) : 1440;
+  if (isToday) from = Math.max(from, Math.ceil(localMinutes() / 15) * 15);
+  const busy = eventsOn(iso).filter((e) => !e.allDay).map((e) => [e.sMin, e.eMin]).sort((a, b) => a[0] - b[0]);
+  const out = []; let cur = from;
+  for (const [s, e] of busy) { if (s - cur >= 30) out.push([cur, Math.min(s, to)]); cur = Math.max(cur, e); if (cur >= to) break; }
+  if (to - cur >= 30) out.push([cur, to]);
+  return out.filter(([s, e]) => e - s >= 30);
+}
+
+function renderSchedule() {
+  const el = $("#schedule");
+  if (S.calError) { el.innerHTML = calErrorHtml(S.calError); return; }
+  if (!S.mcp) { el.innerHTML = `<p class="sub">Connecting to Google Calendar…</p>`; return; }
+  if (!S.events) { el.innerHTML = `<p class="sub">Loading today's events…</p>`; return; }
+  const t = today(), evs = eventsOn(t), clash = conflictsOf(evs), now = localMinutes();
+  const free = freeWindows(t);
+  const rows = [
+    ...evs.map((e) => ({ k: e.allDay ? -1 : e.sMin, html: `<li class="ev ${!e.allDay && e.eMin <= now ? "past" : ""}"><time>${e.allDay ? "All day" : `${hm(e.sMin)}–${hm(e.eMin)}`}</time><div><div class="t">${esc(e.title)}</div>${e.location ? `<div class="l">${esc(e.location)}</div>` : ""}${clash.has(e.id) ? `<span class="conflict">Overlaps another event</span>` : ""}</div></li>` })),
+    ...free.map(([s, e]) => ({ k: s + 0.5, html: `<li class="ev free"><time>${hm(s)}–${hm(e)}</time><div><div class="t">Free · ${fmtDur(e - s)}</div><button class="btn link" data-act="block" data-s="${s}" data-e="${e}" type="button" style="font-size:13px">Block time for a task</button></div></li>` })),
+  ].sort((a, b) => a.k - b.k);
+  const upcoming = [1, 2, 3, 4, 5, 6].map((n) => addDays(t, n)).map((d) => ({ d, evs: eventsOn(d) })).filter((x) => x.evs.length);
+  el.innerHTML = `${rows.length ? `<ul class="events">${rows.map((r) => r.html).join("")}</ul>` : `<p class="sub" style="margin:0">Nothing on your calendar for the rest of today, and no free windows left before your sleep time.</p>`}
+    ${clash.size ? `<p class="notice" style="margin-top:10px">Two or more events overlap today. Decide which one wins, or ask the assistant to help.</p>` : ""}
+    ${upcoming.length ? `<details class="more"><summary>Upcoming this week</summary>${upcoming.map((u) => {
+      const cl = conflictsOf(u.evs);
+      return `<div class="daygroup"><h3>${esc(fmtDate(u.d, { weekday: "long", month: "short", day: "numeric" }))}</h3><ul class="events">${u.evs.map((e) => `<li class="ev"><time>${e.allDay ? "All day" : `${hm(e.sMin)}–${hm(e.eMin)}`}</time><div><div class="t">${esc(e.title)}</div>${cl.has(e.id) ? `<span class="conflict">Overlaps another event</span>` : ""}</div></li>`).join("")}</ul></div>`;
+    }).join("")}</details>` : ""}
+    <p class="hint">From your Google Calendar${S.calStamp ? ` · updated ${new Date(S.calStamp).toLocaleTimeString("en-US", { timeZone: cfg().tz, hour: "numeric", minute: "2-digit" })}` : ""}</p>`;
+  const plan = dayDoc().plan;
+  $("#plan-out").innerHTML = plan ? `<div class="plan-out">${esc(plan)}</div>` : "";
+}
+function fmtDur(m) { const h = Math.floor(m / 60), r = m % 60; return h ? `${h}h${r ? ` ${r}m` : ""}` : `${r}m`; }
+function calErrorHtml(e) {
+  const code = e && e.code;
+  const map = {
+    needs_reauth: "Google Calendar needs to be reconnected. Go to claude.ai Settings → Connectors and reconnect it, then reload this page.",
+    server_not_connected: "Google Calendar isn't connected to your Claude account. Add it in claude.ai Settings → Connectors, then reload.",
+    selection_required: "You have more than one Google Calendar connector. Choose one when claude.ai asks, then reload.",
+    not_in_manifest: "Calendar access is turned off for this page. Turn it on from the artifact's Permissions menu.",
+    approval_required: "This page needs your OK to read your calendar.",
+    blocked_by_policy: "Your organization's settings block calendar access here.",
+    not_granted: "Calendar access isn't available in this view. Open the dashboard on claude.ai.",
+    capability_disabled: "Calendar access isn't available in this view. Open the dashboard on claude.ai.",
+    server_unavailable: "Google Calendar didn't respond. It'll try again shortly.",
+  };
+  const msg = map[code] || "Couldn't load your calendar right now.";
+  return `<p class="notice" style="margin:0">${esc(msg)}</p>${code === "approval_required" || code === "server_unavailable" || code === "upstream_error" ? `<div class="row" style="margin-top:8px"><button class="btn" data-act="cal-retry" type="button">Load my calendar</button></div>` : ""}
+    <p class="hint">I never show calendar details unless they come from your connected Google Calendar.</p>`;
+}
+function calInput() {
+  const t = today();
+  return { startTime: `${t}T00:00:00`, endTime: `${addDays(t, 7)}T00:00:00`, orderBy: "startTime", pageSize: 100 };
+}
+let unwatchCal = null, calKey = "";
+function watchCalendar() {
+  if (!S.mcp) return;
+  const input = calInput(), key = JSON.stringify(input);
+  if (key === calKey) return;
+  calKey = key; if (unwatchCal) unwatchCal();
+  unwatchCal = S.mcp.watchTool(CAL, "list_events", input, (ev) => {
+    if (ev.type === "data") { S.calError = null; S.events = parseEvents(ev.result.payload); S.calStamp = ev.result.cache ? ev.result.cache.storedAt : Date.now(); }
+    else {
+      const c = ev.error && ev.error.code;
+      if (["needs_reauth", "server_not_connected", "blocked_by_policy", "approval_required", "not_in_manifest", "selection_required", "not_granted", "capability_disabled"].includes(c)) S.events = null;
+      if (!S.events || !["server_unavailable", "upstream_error", "rate_limited"].includes(c)) S.calError = ev.error;
+    }
+    renderSchedule(); renderBanner();
+  }, { refetchInterval: 5 * 60 * 1000 });
+}
+async function retryCalendar() {
+  try {
+    const r = await S.mcp.callTool(CAL, "list_events", calInput());
+    S.calError = null; S.events = parseEvents(r.payload); S.calStamp = Date.now();
+  } catch (e) { S.calError = e; }
+  renderSchedule();
+}
+
+/* ---------- Event creation, always behind an explicit confirm ---------- */
+function confirmEvent({ summary, date, sMin, eMin, note }) {
+  return new Promise((resolve) => {
+    const root = $("#modal-root");
+    root.innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="m-title"><div class="modal">
+      <h3 id="m-title">Add this to your Google Calendar?</h3>
+      <label class="form"><span class="label">Title</span><input type="text" id="m-summary" value="${esc(summary)}"></label>
+      <div class="sub">${esc(fmtDate(date, { weekday: "long", month: "short", day: "numeric" }))} · ${hm(sMin)}–${hm(eMin)}</div>
+      ${note ? `<div class="sub">${esc(note)}</div>` : ""}
+      <div class="row"><button class="btn primary" id="m-yes" type="button">Add to calendar</button><button class="btn" id="m-no" type="button">Cancel</button></div>
+    </div></div>`;
+    const done = (v) => { root.innerHTML = ""; resolve(v); };
+    $("#m-yes").onclick = () => done($("#m-summary").value.trim() || summary);
+    $("#m-no").onclick = () => done(null);
+    $("#m-summary").focus();
+  });
+}
+const pad = (n) => String(n).padStart(2, "0");
+async function createEvent({ summary, date, sMin, eMin }) {
+  try {
+    await S.mcp.callTool(CAL, "create_event", { summary, startTime: `${date}T${pad(Math.floor(sMin / 60))}:${pad(sMin % 60)}:00`, endTime: `${date}T${pad(Math.floor(eMin / 60))}:${pad(eMin % 60)}:00`, description: "Planned from Daily Anchor." });
+    toast("Added to your calendar");
+    S.mcp.invalidate(CAL, "list_events").catch(() => {});
+    return "created";
+  } catch (e) {
+    if (e && (e.code === "server_unavailable" || e.code === "upstream_error")) { toast("Unclear if it saved. Check your calendar before trying again."); S.mcp.invalidate(CAL, "list_events").catch(() => {}); return "unknown"; }
+    toast(e && e.code === "approval_required" ? "Calendar changes need your approval." : "Couldn't add the event."); return "failed";
+  }
+}
+async function blockTime(s, e) {
+  const tasks = (dayDoc().top3 || []).map((id) => S.items.find((x) => x.id === id)).filter((x) => x && !x.done);
+  const first = tasks[0] || todaysItems("task").find((x) => !x.done);
+  const len = Math.min(e - s, 60);
+  const summary = await confirmEvent({ summary: first ? first.text : "Focus time", date: today(), sMin: s, eMin: s + len, note: "You can rename it first. Nothing is added until you confirm." });
+  if (summary) await createEvent({ summary, date: today(), sMin: s, eMin: s + len });
+}
+
+/* ---------- Claude: plan my day + assistant chat ---------- */
+function context() {
+  const c = cfg(), t = today(), evs = S.events ? eventsOn(t) : null;
+  const top = (dayDoc().top3 || []).map((id) => S.items.find((x) => x.id === id)).filter(Boolean).map((x) => `${x.text}${x.done ? " (done)" : ""}`);
+  const open = S.items.filter((it) => isCarry(it) && !it.done && !it.someday && it.active <= t).slice(0, 25).map((x) => `[${x.list}] ${x.text}${x.active < t ? " (carried over)" : ""}`);
+  const shop = S.items.filter((it) => it.list === "shopping" && !it.done).map((x) => x.text);
+  return [
+    `Today is ${fmtDate(t, { weekday: "long", month: "long", day: "numeric", year: "numeric" })} (${t}). Local time ${hm(localMinutes())}, time zone ${c.tz}.`,
+    `Name: ${c.name || "(not set)"}. Wakes ${c.wake}, sleeps ${c.sleep}. Best energy: ${c.energy}.`,
+    `Goals: ${(c.goals || []).join("; ") || "(none set)"}.`,
+    evs ? `Calendar today: ${evs.length ? evs.map((e) => `${e.allDay ? "all day" : hm(e.sMin) + "-" + hm(e.eMin)} ${e.title}`).join("; ") : "nothing scheduled"}.` : "Calendar: NOT available right now. Do not guess at events.",
+    S.events ? `Free windows today: ${freeWindows(t).map(([s, e]) => `${hm(s)}-${hm(e)}`).join(", ") || "none"}.` : "",
+    `Top 3 today: ${top.join("; ") || "(none chosen)"}.`,
+    `Open tasks: ${open.join("; ") || "(none)"}.`,
+    `Shopping list: ${shop.join(", ") || "(empty)"}.`,
+    `Habits: ${S.habits.map((h) => `${h.name}${(h.log || {})[t] ? " (done today)" : ""}`).join(", ") || "(none)"}.`,
+    `Meals this week: ${DAYS.map((d) => `${DAY_NAMES[d]}: ${S.meals[d] || "-"}`).join("; ")}.`,
+  ].filter(Boolean).join("\n");
+}
+const PERSONA = `You are the assistant inside a personal daily dashboard for a Christian college student. Be supportive, practical and direct. Keep replies short (under 120 words unless asked for more), plain text, no markdown headings. Help them make progress without guilt or information overload. Never claim you can send reminders, notifications or follow up later: you can't. Never invent calendar events; use only the calendar data given. Calendar events are only created when the user taps the confirm button after you call propose_calendar_event. Say "I've suggested it; tap Add to calendar to confirm." Do not quote Scripture unless asked; if you do, use the ESV and give the reference.`;
+
+async function planDay() {
+  if (!S.sample) { toast("Planning with Claude isn't available in this view."); return; }
+  if (S.planBusy) return; S.planBusy = true; $("#plan-btn").disabled = true;
+  $("#plan-out").innerHTML = `<div class="plan-out">Thinking…</div>`;
+  try {
+    const r = await S.sample(`${PERSONA}\n\n${context()}\n\nWrite a realistic plan for the rest of today. Place the top priorities (or the most important open tasks if none are chosen) into specific free windows, putting the hardest work in their best-energy period. Leave margin and a short break. If there's an overlap on the calendar, point it out in one line. Format: one line per block like "2:00–3:00pm  Task", then one short encouraging sentence. Max 8 lines.`, { modelTier: "default", cache: false, onText: ({ text }) => { $("#plan-out").innerHTML = `<div class="plan-out">${esc(text)}</div>`; } });
+    await saveDay({ plan: r.text });
+  } catch (e) {
+    $("#plan-out").innerHTML = `<p class="notice">${e && e.code === "not_granted" ? "Allow this page to ask Claude to use planning." : e && e.code === "rate_limited" ? "Too many requests. Try again in a minute." : "Couldn't make a plan right now."}</p>`;
+  } finally { S.planBusy = false; $("#plan-btn").disabled = false; }
+}
+
+function chatTools() {
+  const findItem = (text) => { const q = String(text || "").toLowerCase(); return S.items.find((it) => !it.done && it.text.toLowerCase() === q) || S.items.find((it) => !it.done && it.text.toLowerCase().includes(q)); };
+  return [
+    { name: "add_item", description: "Add an item to one of the user's lists. Returns 'added'.", inputSchema: { type: "object", properties: { list: { type: "string", enum: ["task", "errand", "reminder", "shopping"] }, text: { type: "string" } }, required: ["list", "text"] },
+      execute: async (i) => { const list = ["task", "errand", "reminder", "shopping"].includes(i.list) ? i.list : "task"; await addItem(String(i.text), list); return "added"; } },
+    { name: "set_top_priority", description: "Make a task one of today's top 3 priorities, creating the task if it doesn't exist. Fails if 3 are already set.", inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
+      execute: async (i) => { if ((dayDoc().top3 || []).length >= 3) throw new Error("Top 3 is already full"); let it = findItem(i.text); const id = it ? it.id : await addItem(String(i.text), "task"); if (!id) throw new Error("could not save"); await toggleTop(id); return "set"; } },
+    { name: "complete_item", description: "Mark an open item done by matching its text.", inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
+      execute: async (i) => { const it = findItem(i.text); if (!it) throw new Error("No matching open item"); await toggleDone(it.id); return "done: " + it.text; } },
+    { name: "add_habit", description: "Start tracking a new daily habit.", inputSchema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+      execute: async (i) => { await addHabit(String(i.name)); return "added"; } },
+    { name: "set_meal", description: "Set the dinner plan for a weekday (mon..sun).", inputSchema: { type: "object", properties: { day: { type: "string", enum: DAYS }, meal: { type: "string" } }, required: ["day", "meal"] },
+      execute: async (i) => { if (!DAYS.includes(i.day)) throw new Error("bad day"); await saveMeal(i.day, String(i.meal)); return "saved"; } },
+    { name: "propose_calendar_event", description: "Suggest a calendar event. It is NOT created; the user sees a confirm button. Use 24h HH:MM local times and YYYY-MM-DD date.", inputSchema: { type: "object", properties: { summary: { type: "string" }, date: { type: "string" }, start: { type: "string" }, end: { type: "string" } }, required: ["summary", "date", "start", "end"] },
+      execute: async (i) => { const sMin = toMins(i.start), eMin = toMins(i.end); if (!/^\d{4}-\d{2}-\d{2}$/.test(String(i.date)) || !(eMin > sMin)) throw new Error("invalid date or time"); if (!S.mcp) throw new Error("Calendar not connected"); S.chat.push({ role: "propose", summary: String(i.summary), date: String(i.date), sMin, eMin }); renderChat(); return "shown to the user for confirmation; not created yet"; } },
+  ];
+}
+async function sendChat(text) {
+  text = text.trim(); if (!text || S.chatBusy) return;
+  if (!S.sample) { S.chat.push({ role: "me", text }, { role: "sys", text: "The assistant isn't available in this view. Open the dashboard on claude.ai and allow it to ask Claude." }); renderChat(); return; }
+  S.chat.push({ role: "me", text }); const reply = { role: "ai", text: "…" }; S.chat.push(reply);
+  S.chatBusy = true; renderChat();
+  const history = S.chat.filter((m) => m.role === "me" || (m.role === "ai" && m !== reply)).slice(-10).map((m) => ({ role: m.role === "me" ? "user" : "assistant", content: m.text }));
+  history[history.length - 1].content = `${PERSONA}\n\nCurrent dashboard state:\n${context()}\n\nUser: ${text}`;
+  try {
+    const r = await S.sample(history, { modelTier: "default", cache: false, tools: chatTools(), onText: ({ text: t }) => { reply.text = t; renderChat(); } });
+    reply.text = r.text || "Done.";
+  } catch (e) {
+    reply.role = "sys";
+    reply.text = e && e.code === "not_granted" ? "Allow this page to ask Claude to use the assistant." : e && e.code === "rate_limited" ? "That's a lot of requests. Give it a minute." : e && e.code === "tools_unavailable" ? "The assistant can't change your lists from this view." : "The assistant couldn't answer just now.";
+  } finally { S.chatBusy = false; renderChat(); }
+}
+function renderChat() {
+  const el = $("#msgs");
+  if (!S.chat.length) {
+    el.innerHTML = `<div class="msg ai">Hi${cfg().name ? " " + esc(cfg().name) : ""}. Ask me anything, or just type a thought and I'll file it. Try "add milk and eggs to shopping" or "help me fit studying into today".</div>`;
+  } else {
+    el.innerHTML = S.chat.map((m, i) => m.role === "propose"
+      ? `<div class="propose"><div class="label">Suggested event</div><div style="font-weight:600">${esc(m.summary)}</div><div class="sub">${esc(fmtDate(m.date, { weekday: "short", month: "short", day: "numeric" }))} · ${hm(m.sMin)}–${hm(m.eMin)}</div>
+          <div class="row" style="margin-top:8px">${m.status ? `<span class="sub">${m.status === "created" ? "Added to your calendar" : m.status === "dismissed" ? "Not added" : m.status === "unknown" ? "Unclear if it saved. Check your calendar." : "Couldn't add it"}</span>` : `<button class="btn primary small" data-act="prop-yes" data-i="${i}" type="button">Add to calendar</button><button class="btn small" data-act="prop-no" data-i="${i}" type="button">Dismiss</button>`}</div></div>`
+      : `<div class="msg ${m.role}">${esc(m.text)}</div>`).join("");
+  }
+  $("#chat-send").disabled = S.chatBusy;
+  $("#chat-chips").innerHTML = ["Plan my evening", "Plan meals for this week", "I'm overwhelmed. Help me pick 3 things", "Build a morning routine"].map((c) => `<button class="btn small" type="button" data-chip="${esc(c)}">${esc(c)}</button>`).join("");
+  el.lastElementChild && el.lastElementChild.scrollIntoView({ block: "nearest" });
+}
+
+/* ---------- Habits & meals ---------- */
+async function addHabit(name) {
+  name = name.trim(); if (!name || !S.db) return;
+  const ref = S.db.collection("habits").doc(); const body = { name, log: {}, ts: Date.now() };
+  S.habits.push({ id: ref.id, ...body }); renderLife(); await ref.set(body).catch(dbFail);
+}
+async function toggleHabit(id, day) {
+  const h = S.habits.find((x) => x.id === id); if (!h) return;
+  const log = { ...(h.log || {}) }; if (log[day]) delete log[day]; else log[day] = true;
+  // Keep the log bounded to roughly the last year.
+  const cutoff = addDays(today(), -400); for (const k of Object.keys(log)) if (k < cutoff) delete log[k];
+  h.log = log; renderLife(); if (S.db) await S.db.doc("habits/" + id).set({ name: h.name, log, ts: h.ts || Date.now() }).catch(dbFail);
+}
+let mealTimer = null;
+async function saveMeal(day, val) { S.meals = { ...S.meals, [day]: val }; renderLife(); if (S.db) await S.db.doc("meals/week").set(S.meals).catch(dbFail); }
+
+/* ---------- Settings ---------- */
+async function saveSettings() {
+  const v = (id) => $(id).value;
+  const next = { ...cfg(), name: v("#set-name").trim(), tz: v("#set-tz"), wake: v("#set-wake") || DEFAULTS.wake, sleep: v("#set-sleep") || DEFAULTS.sleep, energy: v("#set-energy"),
+    goals: v("#set-goals").split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 8), morning: v("#set-morning") || DEFAULTS.morning, evening: v("#set-evening") || DEFAULTS.evening, notify: v("#set-notify"), translation: "ESV" };
+  S.settings = next; $("#settings-form").dataset.built = ""; renderAll(); watchCalendar();
+  if (S.db) { await S.db.doc("settings/main").set(next).then(() => toast("Settings saved")).catch(dbFail); }
+}
+
+async function wipe() {
+  const ok = await new Promise((resolve) => {
+    $("#modal-root").innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="w-title"><div class="modal">
+      <h3 id="w-title">Delete all your dashboard data?</h3>
+      <p class="sub" style="margin:0">This permanently removes your settings, lists, priorities, check-ins, habits, meals and saved articles. Your Google Calendar isn't affected. This can't be undone.</p>
+      <div class="row"><button class="btn danger" id="w-yes" type="button">Delete everything</button><button class="btn" id="w-no" type="button">Keep my data</button></div></div></div>`;
+    $("#w-yes").onclick = () => { $("#modal-root").innerHTML = ""; resolve(true); };
+    $("#w-no").onclick = () => { $("#modal-root").innerHTML = ""; resolve(false); };
+  });
+  if (!ok || !S.db) return;
+  for (const col of ["items", "days", "habits", "meals", "daily", "settings"]) {
+    const snap = await S.db.collection(col).limit(1000).get().catch(() => null);
+    if (snap) for (const d of snap.docs) await S.db.doc(col + "/" + d.id).delete().catch(() => {});
+  }
+  toast("All dashboard data deleted");
+}
+
+/* ---------- Banner, toast, nav ---------- */
+function renderBanner() {
+  const b = $("#banner");
+  if (S.dbMissing) b.innerHTML = `<p class="notice" style="margin:0 0 16px">Saving is unavailable in this view, so changes won't be kept. Open the dashboard on claude.ai while signed in.</p>`;
+  else b.innerHTML = "";
+}
+let toastT = null;
+function toast(msg) { let t = $(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600); }
+function setTab(tab) {
+  S.tab = tab;
+  document.querySelectorAll("nav.tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  document.querySelectorAll("[data-panel]").forEach((p) => { p.hidden = p.dataset.panel !== tab; });
+  if (tab === "chat") renderChat();
+  try { localStorage.setItem("anchor.tab", tab); } catch {}
+  window.scrollTo({ top: 0 });
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("button, input[type=checkbox]"); if (!t) return;
+  if (t.dataset.tab) return setTab(t.dataset.tab);
+  if (t.dataset.goto) return setTab(t.dataset.goto);
+  if (t.dataset.list) { S.list = t.dataset.list; return renderLists(); }
+  if (t.dataset.chip) return sendChat(t.dataset.chip);
+  const id = t.dataset.id;
+  switch (t.dataset.act) {
+    case "done": return toggleDone(id);
+    case "top": return toggleTop(id);
+    case "del": return removeItem(id);
+    case "keep": return patchItem(id, { active: today(), someday: false });
+    case "someday": return patchItem(id, { someday: true });
+    case "tomorrow": return patchItem(id, { active: addDays(today(), 1), someday: false });
+    case "habit": return toggleHabit(id, t.dataset.day);
+    case "habit-del": { S.habits = S.habits.filter((h) => h.id !== id); renderLife(); if (S.db) await S.db.doc("habits/" + id).delete().catch(dbFail); return; }
+    case "save-morning": return saveDay({ morningQ: pick(MORNING_QS, today(), 3), morningA: $("#ci-answer").value.trim() }).then(() => toast("Saved"));
+    case "save-evening": return saveDay({ evening: $("#ev-good").value.trim() }).then(() => toast("Review saved. Rest well."));
+    case "first": { const v = $("#ev-first").value; if (v.trim()) { await addItem(v, "task", { active: addDays(today(), 1) }); toast("Added for tomorrow"); } return; }
+    case "block": return blockTime(+t.dataset.s, +t.dataset.e);
+    case "cal-retry": return retryCalendar();
+    case "prop-yes": { const m = S.chat[+t.dataset.i]; if (!m || m.status) return; const summary = await confirmEvent({ summary: m.summary, date: m.date, sMin: m.sMin, eMin: m.eMin }); if (summary) { m.status = "pending"; renderChat(); m.status = await createEvent({ ...m, summary }); } renderChat(); return; }
+    case "prop-no": { const m = S.chat[+t.dataset.i]; if (m) m.status = "dismissed"; return renderChat(); }
+  }
+});
+$("#plan-btn").addEventListener("click", planDay);
+$("#quick-add").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#quick-add-input"); addItem(i.value, "task"); i.value = ""; });
+$("#list-add").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#list-add-input"); addItem(i.value, S.list); i.value = ""; });
+$("#habit-add").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#habit-add-input"); addHabit(i.value); i.value = ""; });
+$("#chat-form").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#chat-input"); const v = i.value; i.value = ""; sendChat(v); });
+$("#chat-clear").addEventListener("click", () => { S.chat = []; renderChat(); });
+$("#settings-form").addEventListener("submit", (e) => { e.preventDefault(); saveSettings(); });
+$("#wipe-btn").addEventListener("click", wipe);
+$("#perm-btn").addEventListener("click", async () => { try { const p = await claude.use("permissions"); if (p) await p.manage(); else toast("Use the artifact's Permissions menu."); } catch { toast("Use the artifact's Permissions menu."); } });
+$("#meals").addEventListener("input", (e) => { const d = e.target.dataset.meal; if (!d) return; S.meals = { ...S.meals, [d]: e.target.value }; clearTimeout(mealTimer); mealTimer = setTimeout(() => { if (S.db) S.db.doc("meals/week").set(S.meals).catch(dbFail); }, 700); });
+$("#meals-to-shop").addEventListener("click", () => {
+  const meals = DAYS.map((d) => S.meals[d]).filter(Boolean);
+  if (!meals.length) return toast("Add some meals first.");
+  setTab("chat"); sendChat(`Turn this week's meals into a shopping list and add the ingredients to my shopping list: ${meals.join("; ")}`);
+});
+
+/* ---------- Boot ---------- */
+try { const saved = localStorage.getItem("anchor.tab"); if (saved && document.querySelector(`[data-panel="${saved}"]`)) setTab(saved); } catch {}
+renderAll(); renderChat();
+
+let lastDay = today();
+setInterval(() => {
+  // Roll over at local midnight and keep "past" events and greetings current.
+  if (today() !== lastDay) { lastDay = today(); watchCalendar(); }
+  renderHeader(); if (S.tab === "today") { renderSchedule(); renderCheckin(); renderVerse(); renderQuote(); }
+}, 60 * 1000);
+
+(async () => {
+  const [db, mcp, sample] = await Promise.all([claude.use("db"), claude.use("mcp"), claude.use("sample")]);
+  S.sample = sample; S.mcp = mcp;
+  if (!mcp) S.calError = { code: "capability_disabled" };
+  if (!db) { S.dbMissing = true; S.settingsLoaded = true; renderBanner(); renderAll(); watchCalendar(); return; }
+  S.db = db;
+  const fail = () => { S.dbMissing = true; renderBanner(); };
+  db.doc("settings/main").onSnapshot((s) => { S.settingsLoaded = true; S.settings = s.exists ? s.data() : null; $("#settings-form").dataset.built = ""; renderAll(); watchCalendar(); }, fail);
+  db.collection("items").onSnapshot((s) => { S.items = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderAll(); }, fail);
+  db.collection("days").where("date", ">=", addDays(today(), -14)).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
+  db.collection("habits").orderBy("ts").onSnapshot((s) => { S.habits = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderLife(); }, fail);
+  db.doc("meals/week").onSnapshot((s) => { S.meals = s.exists ? { ...s.data() } : {}; renderLife(); }, fail);
+  db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); }, fail);
+})();
+})();
+</script>
