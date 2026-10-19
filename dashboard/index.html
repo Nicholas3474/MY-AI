@@ -80,6 +80,17 @@ nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: 
 .gym { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-weight: 700; cursor: pointer; }
 .gym input { width: 20px; height: 20px; accent-color: var(--accent); }
 .gym .sub { margin-left: auto; font-weight: 500; }
+.layout-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+.layout-bar .sub { flex: 1; min-width: 200px; }
+.slot { min-width: 0; display: grid; }
+.slot-tools { display: none; }
+.editing .slot-tools { display: flex; align-items: center; gap: 4px; padding: 7px 8px 13px; margin-bottom: -8px; background: var(--ink); color: var(--surface); border-radius: 14px 14px 0 0; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.slot-tools span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-tools button { border: 0; background: color-mix(in srgb, var(--surface) 18%, transparent); color: inherit; border-radius: 7px; padding: 4px 9px; font-weight: 700; font-size: 13px; }
+.slot-tools button:hover { background: color-mix(in srgb, var(--surface) 30%, transparent); }
+.editing .slot > .card { position: relative; }
+.editing .slot.is-hidden > .card, .editing .slot.is-hidden > #setup-card { opacity: .35; }
+@media (max-width: 900px) { .slot-tools [data-move="side"] { display: none; } }
 .workout { margin-top: 8px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); }
 .workout summary { cursor: pointer; font-weight: 700; color: var(--accent); }
 .workout ul { margin: 8px 0; padding-left: 18px; display: grid; gap: 3px; }
@@ -220,9 +231,14 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
   <div id="banner"></div>
 
   <!-- TODAY -->
-  <section data-panel="today">
+  <section data-panel="today" id="today-panel">
+    <div class="layout-bar">
+      <span class="sub" id="layout-hint" hidden>Move boxes with the arrows. ⇄ switches columns on a wide screen. Hidden boxes stay faded here.</span>
+      <button class="btn small" id="layout-reset" type="button" hidden>Reset layout</button>
+      <button class="btn small" id="layout-btn" type="button">Rearrange</button>
+    </div>
     <div class="grid">
-      <div class="col">
+      <div class="col" id="col-left">
         <div id="setup-card"></div>
         <div class="card checkin" id="checkin"></div>
         <div class="card scripture" id="verse"></div>
@@ -245,7 +261,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
           </div>
         </div>
       </div>
-      <div class="col">
+      <div class="col" id="col-right">
         <div class="card" id="top3-card">
           <h2>Top 3 priorities <span class="act sub" id="top3-count"></span></h2>
           <ol class="top3" id="top3"></ol>
@@ -257,7 +273,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
           <div id="schedule"></div>
           <div id="plan-out"></div>
         </div>
-        <div class="card">
+        <div class="card" id="tasks-card">
           <h2>Today's tasks <button class="btn link act" data-goto="lists" type="button">All lists →</button></h2>
           <div id="today-review"></div>
           <ul class="items" id="today-items"></ul>
@@ -1057,8 +1073,75 @@ function setTab(tab) {
 
 /* ---------- Events ---------- */
 document.addEventListener("toggle", (e) => { if (e.target.classList && e.target.classList.contains("workout")) { try { localStorage.setItem("anchor.workout", e.target.open ? "open" : "closed"); } catch {} } }, true);
+/* ---------- Movable Today boxes ---------- */
+const CARDS = [
+  { key: "checkin", sel: "#checkin", name: "Check-in" },
+  { key: "verse", sel: "#verse", name: "Verse of the day" },
+  { key: "quote", sel: "#quote", name: "Today's quote" },
+  { key: "cre", sel: "#articles-card", name: "CRE reads" },
+  { key: "world", sel: "#world-card", name: "World briefing" },
+  { key: "top3", sel: "#top3-card", name: "Top 3 & gym" },
+  { key: "schedule", sel: "#schedule-card", name: "Schedule" },
+  { key: "tasks", sel: "#tasks-card", name: "Today's tasks" },
+];
+const DEFAULT_LAYOUT = { left: ["checkin", "verse", "quote", "cre", "world"], right: ["top3", "schedule", "tasks"], hidden: [] };
+let layout = JSON.parse(JSON.stringify(DEFAULT_LAYOUT)), editing = false;
+const narrow = () => window.matchMedia("(max-width: 900px)").matches;
+const slotOf = (k) => document.querySelector(`.slot[data-card="${k}"]`);
+function normLayout(l) {
+  const keys = CARDS.map((c) => c.key), seen = new Set(), keep = (arr) => (Array.isArray(arr) ? arr : []).filter((k) => keys.includes(k) && !seen.has(k) && seen.add(k));
+  const out = { left: keep(l && l.left), right: keep(l && l.right), hidden: (Array.isArray(l && l.hidden) ? l.hidden : []).filter((k) => keys.includes(k)) };
+  for (const k of keys) if (!seen.has(k)) (DEFAULT_LAYOUT.right.includes(k) ? out.right : out.left).push(k);
+  return out;
+}
+function initSlots() {
+  for (const c of CARDS) {
+    const el = $(c.sel); if (!el) continue;
+    const slot = document.createElement("div"); slot.className = "slot"; slot.dataset.card = c.key;
+    el.before(slot);
+    slot.innerHTML = `<div class="slot-tools"><span>${esc(c.name)}</span><button type="button" data-move="up" aria-label="Move ${esc(c.name)} up">↑</button><button type="button" data-move="down" aria-label="Move ${esc(c.name)} down">↓</button><button type="button" data-move="side" aria-label="Move ${esc(c.name)} to the other column">⇄</button><button type="button" data-move="hide">Hide</button></div>`;
+    slot.append(el);
+  }
+}
+function applyLayout() {
+  const L = $("#col-left"), R = $("#col-right");
+  for (const k of layout.left) { const s = slotOf(k); if (s) L.append(s); }
+  for (const k of layout.right) { const s = slotOf(k); if (s) R.append(s); }
+  L.prepend($("#setup-card"));
+  for (const c of CARDS) {
+    const s = slotOf(c.key); if (!s) continue; const off = layout.hidden.includes(c.key);
+    s.hidden = off && !editing; s.classList.toggle("is-hidden", off);
+    s.querySelector('[data-move="hide"]').textContent = off ? "Show" : "Hide";
+  }
+  $("#today-panel").classList.toggle("editing", editing);
+  $("#layout-btn").textContent = editing ? "Done" : "Rearrange";
+  $("#layout-btn").classList.toggle("primary", editing);
+  $("#layout-hint").hidden = !editing; $("#layout-reset").hidden = !editing;
+}
+let layoutTimer = null;
+function saveLayout() {
+  try { localStorage.setItem("anchor.layout", JSON.stringify(layout)); } catch {}
+  clearTimeout(layoutTimer);
+  layoutTimer = setTimeout(() => { if (S.db) S.db.doc("settings/layout").set(layout).catch(dbFail); }, 600);
+}
+function moveCard(k, how) {
+  const col = layout.left.includes(k) ? "left" : "right", other = col === "left" ? "right" : "left", arr = layout[col], i = arr.indexOf(k);
+  if (how === "hide") layout.hidden = layout.hidden.includes(k) ? layout.hidden.filter((x) => x !== k) : [...layout.hidden, k];
+  else if (how === "side") { arr.splice(i, 1); layout[other].splice(Math.min(i, layout[other].length), 0, k); }
+  else if (how === "up") {
+    if (i > 0) [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+    else if (col === "right" && narrow()) { arr.shift(); layout.left.push(k); }
+  } else if (how === "down") {
+    if (i < arr.length - 1) [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
+    else if (col === "left" && narrow()) { arr.pop(); layout.right.unshift(k); }
+  }
+  applyLayout(); saveLayout();
+  const s = slotOf(k); if (s && how !== "hide") s.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("button, input[type=checkbox]"); if (!t) return;
+  if (t.dataset.move) return moveCard(t.closest(".slot").dataset.card, t.dataset.move);
   if (t.dataset.tab) return setTab(t.dataset.tab);
   if (t.dataset.goto) return setTab(t.dataset.goto);
   if (t.dataset.list) { S.list = t.dataset.list; return renderLists(); }
@@ -1084,6 +1167,8 @@ document.addEventListener("click", async (e) => {
   }
 });
 $("#plan-btn").addEventListener("click", planDay);
+$("#layout-btn").addEventListener("click", () => { editing = !editing; applyLayout(); });
+$("#layout-reset").addEventListener("click", () => { layout = JSON.parse(JSON.stringify(DEFAULT_LAYOUT)); applyLayout(); saveLayout(); toast("Layout reset"); });
 $("#quick-add").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#quick-add-input"); addItem(i.value, "task"); i.value = ""; });
 $("#list-add").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#list-add-input"); addItem(i.value, S.list); i.value = ""; });
 $("#chat-form").addEventListener("submit", (e) => { e.preventDefault(); const i = $("#chat-input"); const v = i.value; i.value = ""; sendChat(v); });
@@ -1094,6 +1179,9 @@ $("#perm-btn").addEventListener("click", async () => { try { const p = await cla
 
 /* ---------- Boot ---------- */
 try { const saved = localStorage.getItem("anchor.tab"); if (saved && document.querySelector(`[data-panel="${saved}"]`)) setTab(saved); } catch {}
+initSlots();
+try { const saved = JSON.parse(localStorage.getItem("anchor.layout") || "null"); if (saved) layout = normLayout(saved); } catch {}
+applyLayout();
 renderAll(); renderChat();
 
 let lastDay = today();
@@ -1113,6 +1201,7 @@ setInterval(() => {
   db.doc("settings/main").onSnapshot((s) => { S.settingsLoaded = true; S.settings = s.exists ? s.data() : null; $("#settings-form").dataset.built = ""; renderAll(); watchCalendar(); }, fail);
   db.collection("items").onSnapshot((s) => { S.items = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderAll(); }, fail);
   db.collection("days").where("date", ">=", [addDays(today(), -14), today().slice(0, 8) + "01"].sort()[0]).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
+  db.doc("settings/layout").onSnapshot((s) => { if (s.exists && !s.metadata.hasPendingWrites) { layout = normLayout(s.data()); try { localStorage.setItem("anchor.layout", JSON.stringify(layout)); } catch {} applyLayout(); } }, fail);
   db.doc("training/split").onSnapshot((s) => { S.training = s.exists ? s.data() : null; renderTop3(); }, fail);
   db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); renderWorld(); }, fail);
 })();
