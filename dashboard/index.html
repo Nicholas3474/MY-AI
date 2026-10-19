@@ -81,6 +81,7 @@ nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: 
 .gym input { width: 20px; height: 20px; accent-color: var(--accent); }
 .gym .sub { margin-left: auto; font-weight: 500; }
 .ticks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tasks-sub { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .tick { background: var(--bg); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .tk-name { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .tk-px { font-family: var(--font-display); font-size: 22px; line-height: 1.15; margin-top: 2px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -276,10 +277,19 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
       </div>
       <div class="col" id="col-right">
         <div class="card" id="top3-card">
-          <h2>Top 3 priorities <span class="act sub" id="top3-count"></span></h2>
+          <h2>Top 3 &amp; today's tasks <span class="act sub" id="top3-count"></span></h2>
           <ol class="top3" id="top3"></ol>
+          <div class="tasks-sub">
+            <div class="row" style="justify-content:space-between"><span class="label" style="margin:0">Everything else today</span><button class="btn link" data-goto="lists" type="button" style="font-size:13px">All lists →</button></div>
+            <div id="today-review"></div>
+            <ul class="items" id="today-items"></ul>
+            <form class="addrow" id="quick-add" style="margin-top:10px">
+              <input type="text" id="quick-add-input" placeholder="Add a task" aria-label="Add a task" autocomplete="off">
+              <button class="btn" type="submit">Add</button>
+            </form>
+            <p class="hint">Tap ☆ on a task to move it into your top 3.</p>
+          </div>
           <div id="gym"></div>
-          <p class="hint">Tap ☆ next to any task to make it one of today's three.</p>
         </div>
         <div class="card" id="schedule-card">
           <h2>Today's schedule <button class="btn small act" id="plan-btn" type="button">Plan my day</button></h2>
@@ -289,15 +299,6 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
         <div class="card" id="market-card">
           <h2>Market snapshot <span class="act sub" id="market-status"></span></h2>
           <div id="market"></div>
-        </div>
-        <div class="card" id="tasks-card">
-          <h2>Today's tasks <button class="btn link act" data-goto="lists" type="button">All lists →</button></h2>
-          <div id="today-review"></div>
-          <ul class="items" id="today-items"></ul>
-          <form class="addrow" id="quick-add" style="margin-top:10px">
-            <input type="text" id="quick-add-input" placeholder="Add a task" aria-label="Add a task" autocomplete="off">
-            <button class="btn" type="submit">Add</button>
-          </form>
         </div>
       </div>
     </div>
@@ -874,9 +875,10 @@ function reviewBlock(list) {
 
 function renderTodayItems() {
   const t = today();
-  const items = S.items.filter((it) => isCarry(it) && !it.someday && (it.done ? it.doneOn === t : it.active === t)).sort((a, b) => (a.done - b.done) || (a.ts - b.ts));
+  const top = dayDoc().top3 || [];
+  const items = S.items.filter((it) => isCarry(it) && !it.someday && !top.includes(it.id) && (it.done ? it.doneOn === t : it.active === t)).sort((a, b) => (a.done - b.done) || (a.ts - b.ts));
   $("#today-review").innerHTML = reviewBlock(null);
-  $("#today-items").innerHTML = items.length ? items.map((it) => itemRow(it)).join("") : `<li class="sub" style="padding:6px 0">Nothing on today's list yet.</li>`;
+  $("#today-items").innerHTML = items.length ? items.map((it) => itemRow(it)).join("") : `<li class="sub" style="padding:6px 0">Nothing else on today's list.</li>`;
 }
 
 function renderLists() {
@@ -1189,12 +1191,11 @@ const CARDS = [
   { key: "quote", sel: "#quote", name: "Today's quote" },
   { key: "cre", sel: "#articles-card", name: "CRE reads" },
   { key: "world", sel: "#world-card", name: "World briefing" },
-  { key: "top3", sel: "#top3-card", name: "Top 3 & gym" },
+  { key: "top3", sel: "#top3-card", name: "Top 3, tasks & gym" },
   { key: "schedule", sel: "#schedule-card", name: "Schedule" },
   { key: "market", sel: "#market-card", name: "Market snapshot" },
-  { key: "tasks", sel: "#tasks-card", name: "Today's tasks" },
 ];
-const DEFAULT_LAYOUT = { left: ["checkin", "verse", "quote", "cre", "world"], right: ["top3", "schedule", "market", "tasks"], hidden: [] };
+const DEFAULT_LAYOUT = { left: ["checkin", "verse", "quote", "cre", "world"], right: ["top3", "schedule", "market"], hidden: [] };
 let layout = JSON.parse(JSON.stringify(DEFAULT_LAYOUT)), editing = false;
 const narrow = () => window.matchMedia("(max-width: 900px)").matches;
 const slotOf = (k) => document.querySelector(`.slot[data-card="${k}"]`);
