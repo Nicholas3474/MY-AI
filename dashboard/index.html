@@ -80,6 +80,10 @@ nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: 
 .gym { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-weight: 700; cursor: pointer; }
 .gym input { width: 20px; height: 20px; accent-color: var(--accent); }
 .gym .sub { margin-left: auto; font-weight: 500; }
+.workout { margin-top: 8px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); }
+.workout summary { cursor: pointer; font-weight: 700; color: var(--accent); }
+.workout ul { margin: 8px 0; padding-left: 18px; display: grid; gap: 3px; }
+.workout li { font-variant-numeric: tabular-nums; }
 .scripture { position: relative; overflow: hidden; border: 0; color: var(--hero-ink); padding: clamp(20px, 4vw, 30px);
   background: radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--hero-glow) 45%, transparent), transparent 55%), linear-gradient(160deg, var(--hero-b), var(--hero-a)); box-shadow: 0 18px 40px -24px var(--hero-a); }
 .scripture h2 { color: var(--hero-glow); }
@@ -634,7 +638,12 @@ function isWeekday() { return ["Mon", "Tue", "Wed", "Thu", "Fri"].includes(parts
 function gymBox(d) {
   const t = today(), back = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(partsIn(cfg().tz).weekday);
   let n = 0; for (let i = 0; i <= back; i++) if ((S.days[addDays(t, -i)] || {}).gym) n++;
-  return `<label class="gym"><input type="checkbox" data-act="gym" ${d.gym ? "checked" : ""}><span>I went to the gym</span><span class="sub">This week: ${n} of 5</span></label>`;
+  const w = S.training && S.training.days && S.training.days[partsIn(cfg().tz).weekday];
+  const open = (() => { try { return localStorage.getItem("anchor.workout") !== "closed"; } catch { return true; } })();
+  const workout = w ? `<details class="workout" ${open ? "open" : ""}><summary>Today: ${esc(w.title)}</summary>
+      <ul>${(w.exercises || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      ${S.training.url ? `<a class="btn link" href="${esc(safeUrl(S.training.url))}" target="_blank" rel="noopener noreferrer">Full training plan →</a>` : ""}</details>` : "";
+  return `<label class="gym"><input type="checkbox" data-act="gym" ${d.gym ? "checked" : ""}><span>I went to the gym</span><span class="sub">This week: ${n} of 5</span></label>${workout}`;
 }
 
 function renderProverbs() {
@@ -1047,6 +1056,7 @@ function setTab(tab) {
 }
 
 /* ---------- Events ---------- */
+document.addEventListener("toggle", (e) => { if (e.target.classList && e.target.classList.contains("workout")) { try { localStorage.setItem("anchor.workout", e.target.open ? "open" : "closed"); } catch {} } }, true);
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("button, input[type=checkbox]"); if (!t) return;
   if (t.dataset.tab) return setTab(t.dataset.tab);
@@ -1103,6 +1113,7 @@ setInterval(() => {
   db.doc("settings/main").onSnapshot((s) => { S.settingsLoaded = true; S.settings = s.exists ? s.data() : null; $("#settings-form").dataset.built = ""; renderAll(); watchCalendar(); }, fail);
   db.collection("items").onSnapshot((s) => { S.items = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderAll(); }, fail);
   db.collection("days").where("date", ">=", [addDays(today(), -14), today().slice(0, 8) + "01"].sort()[0]).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
+  db.doc("training/split").onSnapshot((s) => { S.training = s.exists ? s.data() : null; renderTop3(); }, fail);
   db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); renderWorld(); }, fail);
 })();
 })();
