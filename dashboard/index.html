@@ -237,7 +237,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
               <a class="btn small" href="https://www.wsj.com/economy" target="_blank" rel="noopener noreferrer">Economy</a>
               <a class="btn small" href="https://www.wsj.com/real-estate" target="_blank" rel="noopener noreferrer">Real Estate</a>
             </div>
-            <p class="hint">WSJ blocks Claude from reading its articles, so headlines above come from Bloomberg, NPR and Axios. These buttons open the WSJ itself (you'll need your subscription).</p>
+            <p class="hint">Headlines above come from free sources such as NPR, Axios, CBS News and PBS. WSJ blocks Claude from picking its articles, so these buttons open the WSJ itself with your subscription.</p>
           </div>
         </div>
       </div>
@@ -682,7 +682,7 @@ function renderArticles() {
   const el = $("#articles"), d = S.daily;
   if (!S.db) { el.innerHTML = `<p class="sub">Articles load from your saved data, which isn't available in this view.</p>`; return; }
   if (!d || !Array.isArray(d.articles) || !d.articles.length) {
-    el.innerHTML = `<p class="sub" style="margin:0">Each morning a scheduled Claude task picks three articles from established sources and saves them here. None have been saved yet.</p>`;
+    el.innerHTML = `<p class="sub" style="margin:0">Each morning a scheduled Claude task picks three free-to-read US articles and saves them here. None have been saved yet.</p>`;
     return;
   }
   const stale = d.date !== today();
