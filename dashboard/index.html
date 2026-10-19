@@ -77,6 +77,9 @@ nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: 
 .checkin { border: 2px solid var(--accent); box-shadow: 0 10px 30px -18px var(--accent); }
 .checkin .q { font-family: var(--font-display); font-size: clamp(22px, 4vw, 27px); line-height: 1.2; margin-bottom: 12px; }
 
+.gym { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-weight: 700; cursor: pointer; }
+.gym input { width: 20px; height: 20px; accent-color: var(--accent); }
+.gym .sub { margin-left: auto; font-weight: 500; }
 .scripture { position: relative; overflow: hidden; border: 0; color: var(--hero-ink); padding: clamp(20px, 4vw, 30px);
   background: radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--hero-glow) 45%, transparent), transparent 55%), linear-gradient(160deg, var(--hero-b), var(--hero-a)); box-shadow: 0 18px 40px -24px var(--hero-a); }
 .scripture h2 { color: var(--hero-glow); }
@@ -584,8 +587,9 @@ function renderCheckin() {
           <button class="btn small" data-act="tomorrow" data-id="${it.id}" type="button">Tomorrow</button>
           <button class="btn small" data-act="someday" data-id="${it.id}" type="button">Someday</button>
         </span></li>`).join("")}</ul>${open.length > 6 ? `<p class="hint">+${open.length - 6} more on your Lists tab.</p>` : ""}</div>` : ""}
+      ${isWeekday() ? gymBox(d) : ""}
       <label class="label" for="ev-good" style="margin-top:12px">What went well, and what did you notice of God today?</label>
-      <textarea id="ev-good" placeholder="A sentence or two is plenty">${esc(d.evening || "")}</textarea>
+      <textarea id="ev-good" placeholder="A sentence or two is plenty">${esc($("#ev-good") ? $("#ev-good").value : (d.evening || ""))}</textarea>
       <label class="label" for="ev-first" style="margin-top:10px">First thing tomorrow</label>
       <div class="addrow"><input type="text" id="ev-first" placeholder="e.g. Finish FINC 351 problem set" autocomplete="off"><button class="btn" data-act="first" type="button">Add for tomorrow</button></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" data-act="save-evening" type="button">Save review</button>${d.evening ? `<span class="sub">Saved</span>` : ""}</div>`;
@@ -596,6 +600,13 @@ function renderCheckin() {
     <p class="q">${esc(q)}</p>
     <textarea id="ci-answer" placeholder="Your answer">${esc(d.morningA || "")}</textarea>
     <div class="row" style="margin-top:8px"><button class="btn primary" data-act="save-morning" type="button">Save</button>${d.morningA ? `<span class="sub">Saved. You can come back to this tonight.</span>` : ""}</div>`;
+}
+
+function isWeekday() { return ["Mon", "Tue", "Wed", "Thu", "Fri"].includes(partsIn(cfg().tz).weekday); }
+function gymBox(d) {
+  const t = today(), back = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(partsIn(cfg().tz).weekday);
+  let n = 0; for (let i = 0; i <= back; i++) if ((S.days[addDays(t, -i)] || {}).gym) n++;
+  return `<label class="gym"><input type="checkbox" data-act="gym" ${d.gym ? "checked" : ""}><span>I went to the gym</span><span class="sub">This week: ${n} of 5</span></label>`;
 }
 
 function renderVerse() {
@@ -881,7 +892,7 @@ function context() {
     `Shopping list: ${shop.join(", ") || "(empty)"}.`,
   ].filter(Boolean).join("\n");
 }
-const PERSONA = `You are the assistant inside a personal daily dashboard for a Christian college student. Be supportive, practical and direct. Keep replies short (under 120 words unless asked for more), plain text, no markdown headings. Help them make progress without guilt or information overload. Never claim you can send reminders, notifications or follow up later: you can't. Never invent calendar events; use only the calendar data given. Calendar events are only created when the user taps the confirm button after you call propose_calendar_event. Say "I've suggested it; tap Add to calendar to confirm." Do not quote Scripture unless asked; if you do, use the ESV and give the reference.`;
+const PERSONA = `You are the assistant inside a personal daily dashboard for a Christian college student. Be supportive, practical and direct. Keep replies short (under 120 words unless asked for more), plain text, no markdown headings. Help them make progress without guilt or information overload. Never claim you can send reminders, notifications or follow up later: you can't. Never invent calendar events; use only the calendar data given. Calendar events are only created when the user taps the confirm button after you call propose_calendar_event. Say "I've suggested it; tap Add to calendar to confirm." Weekday gym visits are tracked with an "I went to the gym" checkbox in the evening review, so never create gym tasks or priorities. Do not quote Scripture unless asked; if you do, use the ESV and give the reference.`;
 
 async function planDay() {
   if (!S.sample) { toast("Planning with Claude isn't available in this view."); return; }
@@ -990,6 +1001,7 @@ document.addEventListener("click", async (e) => {
   if (t.dataset.chip) return sendChat(t.dataset.chip);
   const id = t.dataset.id;
   switch (t.dataset.act) {
+    case "gym": return saveDay({ gym: t.checked });
     case "done": return toggleDone(id);
     case "top": return toggleTop(id);
     case "del": return removeItem(id);
