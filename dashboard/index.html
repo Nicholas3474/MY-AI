@@ -150,6 +150,8 @@ textarea { resize: vertical; min-height: 64px; }
 .articles a:hover { color: var(--accent); text-decoration: underline; }
 .articles .meta { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
 .articles p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.wsj { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.wsj .btn { text-decoration: none; color: var(--ink); }
 
 
 .chat { display: flex; flex-direction: column; gap: 10px; min-height: 360px; }
@@ -209,6 +211,19 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
         <div class="card" id="articles-card">
           <h2>Commercial real estate · today's reads</h2>
           <div id="articles"></div>
+        </div>
+        <div class="card" id="world-card">
+          <h2>World briefing</h2>
+          <div id="world"></div>
+          <div class="wsj">
+            <span class="label">Open the Wall Street Journal</span>
+            <div class="row">
+              <a class="btn small" href="https://www.wsj.com/world" target="_blank" rel="noopener noreferrer">World</a>
+              <a class="btn small" href="https://www.wsj.com/economy" target="_blank" rel="noopener noreferrer">Economy</a>
+              <a class="btn small" href="https://www.wsj.com/real-estate" target="_blank" rel="noopener noreferrer">Real Estate</a>
+            </div>
+            <p class="hint">WSJ blocks Claude from reading its articles, so headlines above come from Bloomberg, NPR and Axios. These buttons open the WSJ itself (you'll need your subscription).</p>
+          </div>
         </div>
       </div>
       <div class="col">
@@ -306,7 +321,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
         <div class="card privacy">
           <h2>Privacy &amp; your data</h2>
           <h3>What's saved</h3>
-          <p>Your settings, tasks and lists, top priorities, check-in answers, and the daily commercial real estate links.</p>
+          <p>Your settings, tasks and lists, top priorities, check-in answers, and the daily commercial real estate and world news links.</p>
           <h3>Where it's stored</h3>
           <p>In this artifact's private data store on claude.ai, under your Claude account. Access rules limit it to you (and anyone you explicitly give edit access). It is not in any public code repository.</p>
           <h3>What isn't saved</h3>
@@ -319,6 +334,7 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
           <ul>
             <li>The page only updates while it's open. It doesn't run in the background.</li>
             <li>The daily articles come from a scheduled morning task in Claude, not from this page.</li>
+            <li>Claude can't read the Wall Street Journal, so world headlines come from other established outlets.</li>
             <li id="notif-status">Notifications are off.</li>
           </ul>
           <h3>Delete your data</h3>
@@ -533,7 +549,7 @@ function carried(list) {
 
 /* ---------- Rendering ---------- */
 function renderAll() {
-  renderHeader(); renderSetup(); renderCheckin(); renderVerse(); renderQuote(); renderArticles();
+  renderHeader(); renderSetup(); renderCheckin(); renderVerse(); renderQuote(); renderArticles(); renderWorld();
   renderTop3(); renderSchedule(); renderTodayItems(); renderLists(); renderSettings();
 }
 
@@ -608,6 +624,15 @@ function renderArticles() {
   const stale = d.date !== today();
   el.innerHTML = `${stale ? `<p class="notice" style="margin:0 0 12px">These are from ${esc(fmtDate(d.date, { weekday: "long", month: "short", day: "numeric" }))}. Today's haven't arrived yet.</p>` : ""}
     <ol class="articles">${d.articles.slice(0, 3).map((a) => `<li>
+      <div class="meta">${esc(a.source || "")}${a.published ? " · " + esc(a.published) : ""}</div>
+      <a href="${esc(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${esc(a.title)}</a>
+      ${a.why ? `<p>${esc(a.why)}</p>` : ""}</li>`).join("")}</ol>`;
+}
+function renderWorld() {
+  const el = $("#world"), d = S.daily;
+  if (!d || !Array.isArray(d.world) || !d.world.length) { el.innerHTML = `<p class="sub" style="margin:0">Each morning the scheduled Claude task saves three major world stories here.</p>`; return; }
+  el.innerHTML = `${d.date !== today() ? `<p class="notice" style="margin:0 0 12px">From ${esc(fmtDate(d.date, { weekday: "long", month: "short", day: "numeric" }))}.</p>` : ""}
+    <ol class="articles">${d.world.slice(0, 3).map((a) => `<li>
       <div class="meta">${esc(a.source || "")}${a.published ? " · " + esc(a.published) : ""}</div>
       <a href="${esc(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${esc(a.title)}</a>
       ${a.why ? `<p>${esc(a.why)}</p>` : ""}</li>`).join("")}</ol>`;
@@ -1010,7 +1035,7 @@ setInterval(() => {
   db.doc("settings/main").onSnapshot((s) => { S.settingsLoaded = true; S.settings = s.exists ? s.data() : null; $("#settings-form").dataset.built = ""; renderAll(); watchCalendar(); }, fail);
   db.collection("items").onSnapshot((s) => { S.items = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderAll(); }, fail);
   db.collection("days").where("date", ">=", addDays(today(), -14)).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
-  db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); }, fail);
+  db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); renderWorld(); }, fail);
 })();
 })();
 </script>
