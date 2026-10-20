@@ -80,6 +80,15 @@ nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: 
 .gym { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-weight: 700; cursor: pointer; }
 .gym input { width: 20px; height: 20px; accent-color: var(--accent); }
 .gym .sub { margin-left: auto; font-weight: 500; }
+.journal-btn { border: 1px solid color-mix(in srgb, var(--hero-ink) 45%, transparent); background: color-mix(in srgb, var(--hero-ink) 12%, transparent); color: var(--hero-ink); border-radius: 999px; padding: 5px 14px; font-weight: 700; font-size: 13px; letter-spacing: .03em; }
+.journal-btn:hover { background: color-mix(in srgb, var(--hero-ink) 22%, transparent); }
+.jr-lock { display: grid; gap: 10px; max-width: 320px; margin: 10px auto 6px; text-align: center; }
+.jr-lock input { text-align: center; font-size: 22px; letter-spacing: .4em; }
+.jr-day { padding: 16px 0; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+.jr-day h3 { font-family: var(--font-display); font-weight: 400; font-size: 21px; }
+.jr-day p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.jr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.jr-chips span { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
 .echo { margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: var(--gold-soft); white-space: pre-wrap; overflow-wrap: anywhere; }
 .echo .label { color: var(--gold); }
 .tasks-sub { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
@@ -220,7 +229,10 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
       <h1 id="greeting">Good morning</h1>
       <div class="date" id="today-date"></div>
     </div>
-    <span class="mode-chip" id="mode-chip">Morning check-in</span>
+    <div class="row" style="position:relative;gap:10px">
+      <span class="mode-chip" id="mode-chip">Morning check-in</span>
+      <button class="journal-btn" id="journal-btn" type="button" data-tab="journal">🔒 Journal</button>
+    </div>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
@@ -361,6 +373,11 @@ footer.fine { margin-top: 28px; color: var(--muted); font-size: 12px; }
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- JOURNAL (passcode screen; not in the tab bar) -->
+  <section data-panel="journal" hidden>
+    <div class="card" id="journal" style="max-width:760px;margin:0 auto"></div>
   </section>
 
   <!-- SETTINGS -->
@@ -731,6 +748,71 @@ function renderWorld() {
       <a href="${esc(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${esc(a.title)}</a>
       ${a.why ? `<p>${esc(a.why)}</p>` : ""}</li>`).join("")}</ol>`;
 }
+/* ---------- Journal behind a passcode ----------
+   A privacy screen for people looking at your screen, not encryption: the entries are already
+   limited to your account by the data store's access rules. Only a SHA-256 hash of the passcode is stored. */
+let journalUnlocked = false, journalDays = null, journalFails = 0, journalWaitUntil = 0, journalChanging = false;
+async function sha256(s) { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join(""); }
+function lockJournal() { journalUnlocked = false; journalDays = null; journalChanging = false; if (S.tab === "journal") renderJournal(); }
+async function loadJournal() {
+  if (!S.db) return;
+  const snap = await S.db.collection("days").orderBy("date", "desc").limit(120).get().catch(() => null);
+  journalDays = snap ? snap.docs.map((d) => d.data()) : [];
+  renderJournal();
+}
+function renderJournal() {
+  const el = $("#journal");
+  if (!journalUnlocked) {
+    el.innerHTML = `<h2>Journal</h2>
+      <form class="jr-lock" id="jr-form">
+        <p style="margin:0" class="sub">Enter your passcode to read your journal.</p>
+        <input type="password" id="jr-code" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="Passcode">
+        <button class="btn primary" type="submit">Unlock</button>
+        <p class="hint" id="jr-msg" style="margin:0"></p>
+      </form>`;
+    setTimeout(() => { const i = $("#jr-code"); if (i) i.focus(); }, 50);
+    return;
+  }
+  const days = (journalDays || []).filter((d) => d.morningA || d.evening || d.proverbsNote);
+  const prov = (iso) => { const day = +iso.slice(8), [y, m] = iso.split("-").map(Number), dim = new Date(Date.UTC(y, m, 0)).getUTCDate(); return day === dim && day < 31 ? `Proverbs ${day}–31` : `Proverbs ${day}`; };
+  el.innerHTML = `<h2>Journal <span class="act row" style="gap:6px"><button class="btn small" type="button" id="jr-change">Change passcode</button><button class="btn small primary" type="button" id="jr-lockbtn">Lock</button></span></h2>
+    ${journalChanging ? `<form class="form" id="jr-change-form" style="margin-bottom:14px">
+      <label>Current passcode<input type="password" id="jr-old" inputmode="numeric" autocomplete="off"></label>
+      <label>New passcode (at least 4 digits)<input type="password" id="jr-new" inputmode="numeric" autocomplete="off"></label>
+      <label>Repeat new passcode<input type="password" id="jr-new2" inputmode="numeric" autocomplete="off"></label>
+      <div class="row"><button class="btn primary" type="submit">Save passcode</button><button class="btn" type="button" id="jr-change-cancel">Cancel</button></div>
+      <p class="hint" id="jr-change-msg" style="margin:0"></p></form>` : ""}
+    <p class="sub" style="margin:0 0 4px">Your morning answers, evening reflections and Proverbs notes, newest first. It locks again when you leave this screen or switch apps.</p>
+    ${journalDays === null ? `<p class="sub">Loading…</p>` : days.length ? days.map((d) => `<article class="jr-day">
+      <h3>${esc(fmtDate(d.date, { weekday: "long", month: "long", day: "numeric", year: "numeric" }))}</h3>
+      ${d.morningA ? `<div><span class="label">Morning · ${esc(d.morningQ || "")}</span><p>${esc(d.morningA)}</p></div>` : ""}
+      ${d.evening ? `<div><span class="label">Evening reflection</span><p>${esc(d.evening)}</p></div>` : ""}
+      ${d.proverbsNote ? `<div><span class="label">${esc(prov(d.date))} · verse that stood out</span><p>${esc(d.proverbsNote)}</p></div>` : ""}
+      ${d.gym || d.proverbs ? `<div class="jr-chips">${d.gym ? "<span>Gym ✓</span>" : ""}${d.proverbs ? "<span>Proverbs read ✓</span>" : ""}</div>` : ""}
+    </article>`).join("") : `<p class="sub">Nothing written yet. Your check-in answers, evening reflections and Proverbs notes will collect here.</p>`}`;
+}
+document.addEventListener("submit", async (e) => {
+  if (e.target.id === "jr-form") {
+    e.preventDefault();
+    const msg = $("#jr-msg"), code = $("#jr-code").value.trim();
+    if (Date.now() < journalWaitUntil) { msg.textContent = `Too many tries. Wait ${Math.ceil((journalWaitUntil - Date.now()) / 1000)} seconds.`; return; }
+    if (!S.lockHash) { msg.textContent = "No passcode is set yet. Ask Claude to set one."; return; }
+    if (await sha256(code) === S.lockHash) { journalUnlocked = true; journalFails = 0; renderJournal(); loadJournal(); }
+    else { journalFails++; $("#jr-code").value = ""; if (journalFails >= 5) { journalWaitUntil = Date.now() + 30000; journalFails = 0; msg.textContent = "Too many tries. Wait 30 seconds."; } else msg.textContent = "That passcode isn't right."; }
+  }
+  if (e.target.id === "jr-change-form") {
+    e.preventDefault();
+    const msg = $("#jr-change-msg"), oldC = $("#jr-old").value.trim(), a = $("#jr-new").value.trim(), b = $("#jr-new2").value.trim();
+    if (await sha256(oldC) !== S.lockHash) { msg.textContent = "Your current passcode isn't right."; return; }
+    if (!/^\d{4,12}$/.test(a)) { msg.textContent = "Use 4 to 12 digits."; return; }
+    if (a !== b) { msg.textContent = "The new passcodes don't match."; return; }
+    const hash = await sha256(a);
+    try { await S.db.doc("settings/lock").set({ hash }); S.lockHash = hash; journalChanging = false; renderJournal(); toast("Passcode changed"); }
+    catch { msg.textContent = "Couldn't save the new passcode. Try again."; }
+  }
+});
+document.addEventListener("visibilitychange", () => { if (document.hidden) lockJournal(); });
+
 function safeUrl(u) { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:" ? x.href : "#"; } catch { return "#"; } }
 
 function renderTop3() {
@@ -1073,6 +1155,7 @@ function setTab(tab) {
   document.querySelectorAll("nav.tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
   document.querySelectorAll("[data-panel]").forEach((p) => { p.hidden = p.dataset.panel !== tab; });
   if (tab === "chat") renderChat();
+  if (tab === "journal") renderJournal(); else if (journalUnlocked) lockJournal();
   try { localStorage.setItem("anchor.tab", tab); } catch {}
   window.scrollTo({ top: 0 });
 }
@@ -1147,6 +1230,9 @@ function moveCard(k, how) {
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("button, input[type=checkbox]"); if (!t) return;
   if (t.dataset.move) return moveCard(t.closest(".slot").dataset.card, t.dataset.move);
+  if (t.id === "jr-lockbtn") { lockJournal(); return setTab("today"); }
+  if (t.id === "jr-change") { journalChanging = !journalChanging; return renderJournal(); }
+  if (t.id === "jr-change-cancel") { journalChanging = false; return renderJournal(); }
   if (t.dataset.tab) return setTab(t.dataset.tab);
   if (t.dataset.goto) return setTab(t.dataset.goto);
   if (t.dataset.list) { S.list = t.dataset.list; return renderLists(); }
@@ -1207,6 +1293,7 @@ setInterval(() => {
   db.collection("items").onSnapshot((s) => { S.items = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderAll(); }, fail);
   db.collection("days").where("date", ">=", [addDays(today(), -14), today().slice(0, 8) + "01"].sort()[0]).onSnapshot((s) => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.days = m; renderAll(); }, fail);
   db.doc("settings/layout").onSnapshot((s) => { if (s.exists && !s.metadata.hasPendingWrites) { layout = normLayout(s.data()); try { localStorage.setItem("anchor.layout", JSON.stringify(layout)); } catch {} applyLayout(); } }, fail);
+  db.doc("settings/lock").onSnapshot((s) => { S.lockHash = s.exists ? s.data().hash : null; }, fail);
   db.doc("training/split").onSnapshot((s) => { S.training = s.exists ? s.data() : null; renderTop3(); }, fail);
   db.collection("daily").orderBy("date", "desc").limit(1).onSnapshot((s) => { S.daily = s.docs[0] ? s.docs[0].data() : null; renderArticles(); renderWorld(); }, fail);
 })();
