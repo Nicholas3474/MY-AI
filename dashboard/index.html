@@ -80,6 +80,9 @@ nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: 
 .gym { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-weight: 700; cursor: pointer; }
 .gym input { width: 20px; height: 20px; accent-color: var(--accent); }
 .gym .sub { margin-left: auto; font-weight: 500; }
+.echo { margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: var(--gold-soft); white-space: pre-wrap; overflow-wrap: anywhere; }
+.echo .label { color: var(--gold); }
+.tasks-sub { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .layout-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
 .layout-bar .sub { flex: 1; min-width: 200px; }
 .slot { min-width: 0; display: grid; }
@@ -636,6 +639,7 @@ function renderCheckin() {
           <button class="btn small" data-act="tomorrow" data-id="${it.id}" type="button">Tomorrow</button>
           <button class="btn small" data-act="someday" data-id="${it.id}" type="button">Someday</button>
         </span></li>`).join("")}</ul>${open.length > 6 ? `<p class="hint">+${open.length - 6} more on your Lists tab.</p>` : ""}</div>` : ""}
+      ${d.morningA ? `<div class="echo"><span class="label">This morning you wrote</span><div class="sub">${esc(d.morningQ || "")}</div><div>${esc(d.morningA)}</div></div>` : ""}
       <label class="label" for="ev-good" style="margin-top:12px">What went well, and what did you notice of God today?</label>
       <textarea id="ev-good" placeholder="A sentence or two is plenty">${esc($("#ev-good") ? $("#ev-good").value : (d.evening || ""))}</textarea>
       <label class="label" for="ev-first" style="margin-top:10px">First thing tomorrow</label>
@@ -645,6 +649,7 @@ function renderCheckin() {
   }
   const q = d.morningQ || pick(MORNING_QS, today(), 3);
   el.innerHTML = `<h2>${md === "morning" ? "Morning check-in" : "Check-in"}</h2>
+    ${(() => { const y = S.days[addDays(today(), -1)] || {}; return y.evening ? `<div class="echo" style="margin:0 0 12px"><span class="label">Last night you wrote</span><div>${esc(y.evening)}</div></div>` : ""; })()}
     <p class="q">${esc(q)}</p>
     <textarea id="ci-answer" placeholder="Your answer">${esc(d.morningA || "")}</textarea>
     <div class="row" style="margin-top:8px"><button class="btn primary" data-act="save-morning" type="button">Save</button>${d.morningA ? `<span class="sub">Saved. You can come back to this tonight.</span>` : ""}</div>`;
