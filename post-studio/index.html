@@ -139,6 +139,19 @@ details .field { margin-top: 12px; }
 .result p { margin: 0; }
 .result .extra { white-space: pre-wrap; }
 .head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.drop { border: 1.5px dashed var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; background: var(--bg); }
+.drop.over { border-color: var(--accent); background: var(--soft); }
+.drop-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.thumb { position: relative; aspect-ratio: 1; max-width: 100%; border-radius: 6px; overflow: hidden; background: var(--soft); border: 1px solid var(--line); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .num { position: absolute; left: 4px; top: 4px; font-family: var(--font-mono); font-size: 11px; background: var(--ink); color: var(--panel); border-radius: 4px; padding: 0 5px; }
+.thumb .x { position: absolute; right: 3px; top: 3px; width: 24px; height: 24px; padding: 0; border-radius: 50%; font-size: 14px; line-height: 1; background: var(--panel); }
+.thumb.loading img { opacity: 0.5; }
+.strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.strip a { flex: 0 0 auto; width: 96px; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--soft); }
+.strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
 </style>
 
 <div class="wrap">
@@ -206,6 +219,17 @@ details .field { margin-top: 12px; }
       <div class="field">
         <label for="details">Details to include (optional)</label>
         <input type="text" id="details" placeholder="Names to tag, a link, a call to action, numbers">
+      </div>
+      <div class="field">
+        <label for="photoInput">Photos (optional)</label>
+        <div class="drop" id="drop">
+          <div class="drop-row">
+            <button type="button" class="small" id="addPhotos">Add photos</button>
+            <span class="hint" id="photoHint">Up to 10. Claude looks at them while writing.</span>
+          </div>
+          <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
       </div>
 
       <details id="voiceBox">
@@ -280,7 +304,9 @@ details .field { margin-top: 12px; }
   };
 
   let state = { platform: "both", current: SAMPLE, busy: false };
-  let sample = null, db = null, col = null, voiceDoc = null;
+  let sample = null, db = null, col = null, voiceDoc = null, assets = null, imgLimits = null;
+  const MAX_PHOTOS = 10;
+  let photos = []; // { key, id, url, blob, uploading }
   let drafts = [];
   let voice = { who: "", style: "", audience: "", avoid: "", examples: "" };
 
@@ -362,7 +388,7 @@ details .field { margin-top: 12px; }
   function briefBlock(b) {
     return `Post type: ${b.goal}
 Tone: ${b.tone}
-Idea: ${b.idea}${b.details ? "\nMust include: " + b.details : ""}`;
+Idea: ${b.idea}${b.details ? "\nMust include: " + b.details : ""}${b.photoCount ? `\nPhotos: ${b.photoCount} attached${b.photosSent < b.photoCount ? ` (you can see the first ${b.photosSent})` : ""}, numbered in order. Use what you can actually see in them for concrete detail, but do not guess names, places or numbers from them. For Instagram, set "visual" to how to post these photos: which number to use as the cover and the carousel order, and write alt text for the cover photo.` : ""}`;
   }
   function draftPrompt(b, plats) {
     const lens = plats.map(p => `${p === "linkedin" ? "LinkedIn post" : "Instagram caption"}: ${LENGTHS[b.length][p]}`).join("\n");
@@ -484,6 +510,9 @@ Reply with only a JSON object with the same keys as the current draft, no other 
     body.append(el("div", { class: "revise" }, revIn, revBtn));
     body.append(el("p", { class: "err", id: "err-" + plat, hidden: true }));
 
+    const ids = (state.current.brief && state.current.brief.photoIds) || [];
+    const strip = photoStrip(ids);
+    if (strip) body.prepend(strip);
     card.append(head, body);
     return card;
   }
@@ -535,13 +564,16 @@ Reply with only a JSON object with the same keys as the current draft, no other 
     return {
       idea: $("idea").value.trim(),
       goal: $("goal").value, tone: $("tone").value, length: $("length").value,
-      details: $("details").value.trim(), platform: state.platform
+      details: $("details").value.trim(), platform: state.platform,
+      photoIds: photos.filter(p => p.id).map(p => p.id), photoCount: photos.length
     };
   }
   function fillBrief(b) {
     $("idea").value = b.idea || ""; $("goal").value = b.goal || $("goal").value;
     $("tone").value = b.tone || $("tone").value; $("length").value = b.length || "medium";
     $("details").value = b.details || ""; setPlatform(b.platform || "both");
+    photos = (b.photoIds || []).map(id => ({ key: id, id, url: "/_blob/" + id, blob: null }));
+    renderThumbs();
   }
   function setPlatform(p) {
     state.platform = p;
@@ -551,6 +583,58 @@ Reply with only a JSON object with the same keys as the current draft, no other 
   const platsFor = (p) => p === "both" ? ["linkedin", "instagram"] : [p];
 
   function showBriefErr(msg) { const e = $("briefErr"); e.textContent = msg || ""; e.hidden = !msg; }
+
+  // ---------- photos ----------
+  function renderThumbs() {
+    const box = $("thumbs"); box.replaceChildren();
+    photos.forEach((p, i) => {
+      const x = el("button", { type: "button", class: "x", "aria-label": "Remove photo " + (i + 1), text: "×" });
+      x.addEventListener("click", () => { photos = photos.filter(q => q !== p); renderThumbs(); });
+      box.append(el("div", { class: "thumb" + (p.uploading ? " loading" : "") },
+        el("img", { src: p.url, alt: "Photo " + (i + 1) }), el("span", { class: "num", text: String(i + 1) }), x));
+    });
+    $("addPhotos").disabled = photos.length >= MAX_PHOTOS;
+  }
+  async function addFiles(files) {
+    const list = Array.from(files || []).filter(f => /^image\//.test(f.type));
+    if (!list.length) { toast("Pick image files (JPG, PNG, WebP or GIF)."); return; }
+    const room = MAX_PHOTOS - photos.length;
+    if (list.length > room) toast(`Only ${MAX_PHOTOS} photos per post. Added the first ${room}.`);
+    for (const f of list.slice(0, room)) {
+      if (f.size > 20 * 1024 * 1024) { toast(f.name + " is over 20 MB. Pick a smaller version."); continue; }
+      const p = { key: Math.random().toString(36).slice(2), id: null, url: URL.createObjectURL(f), blob: f, uploading: !!assets };
+      photos.push(p);
+      if (assets) {
+        assets.upload(f).then(r => { p.id = r.id; p.uploading = false; renderThumbs(); })
+          .catch(() => { p.uploading = false; renderThumbs(); toast("A photo couldn't be saved. It still works for this draft."); });
+      }
+    }
+    renderThumbs();
+  }
+  $("addPhotos").addEventListener("click", () => $("photoInput").click());
+  $("photoInput").addEventListener("change", (e) => { addFiles(e.target.files); e.target.value = ""; });
+  const drop = $("drop");
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); });
+  async function photoBlobs() {
+    if (!imgLimits || !photos.length) return [];
+    const out = [];
+    for (const p of photos.slice(0, imgLimits.maxCount)) {
+      try {
+        let b = p.blob;
+        if (!b) { const r = await fetch(p.url); if (!r.ok) continue; b = await r.blob(); p.blob = b; }
+        if (b.size <= imgLimits.maxInputBytes && (!imgLimits.mediaTypes || imgLimits.mediaTypes.includes(b.type))) out.push(b);
+      } catch (e) { /* skip this photo */ }
+    }
+    return out;
+  }
+  function photoStrip(ids) {
+    if (!ids || !ids.length) return null;
+    const strip = el("div", { class: "strip", "aria-label": "Photos for this post" });
+    ids.forEach((id, i) => strip.append(el("a", { href: "/_blob/" + id, target: "_blank", rel: "noopener", title: "Open photo " + (i + 1) + " full size" }, el("img", { src: "/_blob/" + id, alt: "Photo " + (i + 1) }))));
+    return strip;
+  }
 
   // ---------- Claude calls ----------
   function clean(plat, d) {
@@ -573,7 +657,12 @@ Reply with only a JSON object with the same keys as the current draft, no other 
     state.busy = true; go.disabled = true;
     go.replaceChildren(el("span", { class: "spinner", "aria-hidden": "true" }), "Drafting…");
     try {
-      const res = await sample.json(draftPrompt(b, plats), { modelTier: "default", cache: false });
+      if (photos.some(p => p.uploading)) { go.replaceChildren(el("span", { class: "spinner", "aria-hidden": "true" }), "Saving photos…"); await waitUploads(); go.replaceChildren(el("span", { class: "spinner", "aria-hidden": "true" }), "Drafting…"); b.photoIds = photos.filter(p => p.id).map(p => p.id); }
+      const imgs = await photoBlobs();
+      b.photosSent = imgs.length;
+      const opts = { modelTier: "default", cache: false };
+      if (imgs.length) opts.images = imgs;
+      const res = await sample.json(draftPrompt(b, plats), opts);
       const next = { brief: b, angle: String((res && res.angle) || "") };
       for (const p of plats) next[p] = clean(p, res && res[p]);
       if (!plats.some(p => next[p])) throw { code: "invalid_json" };
@@ -592,7 +681,7 @@ Reply with only a JSON object with the same keys as the current draft, no other 
     if (!sample) return;
     const b = c.brief || readBrief();
     if (!b.idea) { showBriefErr("Write the idea in the brief first."); return; }
-    await runCard(plat, btn, draftPrompt(b, [plat]), (res) => res && res[plat]);
+    await runCard(plat, btn, draftPrompt(b, [plat]), (res) => res && res[plat], true);
   }
   async function revise(plat, input, btn) {
     const instr = input.value.trim();
@@ -601,13 +690,19 @@ Reply with only a JSON object with the same keys as the current draft, no other 
     const ok = await runCard(plat, btn, revisePrompt(plat, state.current[plat], instr, state.current.brief), (res) => res);
     if (ok) input.value = "";
   }
-  async function runCard(plat, btn, prompt, pick) {
+  async function waitUploads() {
+    const t0 = Date.now();
+    while (photos.some(p => p.uploading) && Date.now() - t0 < 30000) await new Promise(r => setTimeout(r, 300));
+  }
+  async function runCard(plat, btn, prompt, pick, withImages) {
     const errEl = $("err-" + plat);
     const label = btn.textContent;
     btn.disabled = true; btn.replaceChildren(el("span", { class: "spinner", "aria-hidden": "true" }), "Working…");
     if (errEl) errEl.hidden = true;
     try {
-      const res = await sample.json(prompt, { modelTier: "default", cache: false });
+      const opts = { modelTier: "default", cache: false };
+      if (withImages) { const imgs = await photoBlobs(); if (imgs.length) opts.images = imgs; }
+      const res = await sample.json(prompt, opts);
       const d = clean(plat, pick(res));
       if (!d || !(d.post || d.caption)) throw { code: "invalid_json" };
       if (plat === "instagram") { d.visual = d.visual || state.current.instagram.visual; d.altText = d.altText || state.current.instagram.altText; }
@@ -843,8 +938,14 @@ Reply with only a JSON object in this exact shape:
   async function removeDraft(id) {
     if (!col) return;
     try {
+      const gone = drafts.find(x => x.id === id);
       await col.doc(id).delete();
       drafts = drafts.filter(x => x.id !== id);
+      if (assets && gone && gone.brief && gone.brief.photoIds) {
+        const keep = new Set(photos.map(p => p.id));
+        drafts.forEach(x => ((x.brief && x.brief.photoIds) || []).forEach(i => keep.add(i)));
+        for (const pid of gone.brief.photoIds) if (!keep.has(pid)) assets.delete(pid).catch(() => {});
+      }
       if (state.current && state.current.id === id) delete state.current.id;
       renderShelf(); renderDrafts();
       toast("Draft deleted");
@@ -861,12 +962,20 @@ Reply with only a JSON object in this exact shape:
   async function init() {
     renderDrafts(); renderShelf();
     if (!window.claude || !window.claude.use) { setStatus("Drafting needs claude.ai"); return; }
-    const [s, d, u] = await Promise.all([
+    const [s, d, u, a] = await Promise.all([
       claude.use("sample").catch(() => null),
       claude.use("db").catch(() => null),
-      claude.use("user").catch(() => null)
+      claude.use("user").catch(() => null),
+      claude.use("assets").catch(() => null)
     ]);
-    sample = s;
+    sample = s; assets = a;
+    if (sample) {
+      const lim = await sample.limits().catch(() => null);
+      imgLimits = (lim && lim.images) || null;
+      if (imgLimits && imgLimits.mediaTypes) $("photoInput").accept = imgLimits.mediaTypes.join(",");
+    }
+    if (!imgLimits) $("photoHint").textContent = "Up to 10. Saved with the draft." + (sample ? " (Claude can't see photos in this view.)" : "");
+    if (!assets) $("photoHint").textContent += " Photos won't be saved in this view.";
     if (!sample) $("go").title = "Drafting needs this page open on claude.ai";
     const owner = u ? await u.isOwner().catch(() => false) : false;
     if (!d || !owner) { setStatus(sample ? "Drafts aren't saved in this view" : "Read-only view"); return; }

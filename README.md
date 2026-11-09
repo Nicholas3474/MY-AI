@@ -26,7 +26,7 @@ A personal daily dashboard that runs inside Claude as a private claude.ai artifa
 
 ## Post Studio
 
-`post-studio/index.html` is a second private artifact that drafts LinkedIn posts and Instagram captions from a short brief. It writes in your saved voice profile (built from a voice interview with Claude), shows what appears before "see more", counts characters against each platform's limit, and lets you revise, copy and save drafts. It never posts for you. The voice profile and saved drafts live in the artifact's data store and only the owner can read them.
+`post-studio/index.html` is a second private artifact that drafts LinkedIn posts and Instagram captions from a short brief. It writes in your saved voice profile (built from a voice assessment), can look at photos you attach,, shows what appears before "see more", counts characters against each platform's limit, and lets you revise, copy and save drafts. It never posts for you. The voice profile and saved drafts live in the artifact's data store and only the owner can read them.
 
 ## Limitations
 
