@@ -24,6 +24,10 @@ A personal daily dashboard that runs inside Claude as a private claude.ai artifa
 | World briefing | The same morning task saves three world headlines from free outlets (NPR, Axios, CBS News, PBS). WSJ blocks Claude, so the card links straight to WSJ World, Economy and Real Estate instead. |
 | Notifications | Off. The page can't notify you by itself; a scheduled task can be added later if you want phone notifications. |
 
+## Post Studio
+
+`post-studio/index.html` is a second private artifact that drafts LinkedIn posts and Instagram captions from a short brief. It writes in your saved voice profile (built from a voice interview with Claude), shows what appears before "see more", counts characters against each platform's limit, and lets you revise, copy and save drafts. It never posts for you. The voice profile and saved drafts live in the artifact's data store and only the owner can read them.
+
 ## Limitations
 
 - The page updates only while it's open. It doesn't run in the background.

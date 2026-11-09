@@ -1,0 +1,669 @@
+<title>Post Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a writer's desk. Brief on the left, drafts on the right, saved drafts as a shelf below. Stacks on phones. */
+:root {
+  --bg: #f3f4f6;
+  --panel: #ffffff;
+  --ink: #17202b;
+  --muted: #5d6877;
+  --line: #d9dde3;
+  --accent: #2f4fd8;
+  --accent-ink: #ffffff;
+  --li: #1d63b8;
+  --ig: #b8336a;
+  --warn: #a35a00;
+  --bad: #b3261e;
+  --soft: #e9ecf3;
+  --font-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161c; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa4b2; --line: #2d3540;
+    --accent: #8ea4ff; --accent-ink: #0f1420; --li: #6fa8ef; --ig: #ec7aa6; --warn: #f0b05a; --bad: #ff8a80; --soft: #222a35;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161c; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa4b2; --line: #2d3540;
+  --accent: #8ea4ff; --accent-ink: #0f1420; --li: #6fa8ef; --ig: #ec7aa6; --warn: #f0b05a; --bad: #ff8a80; --soft: #222a35;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.9rem; letter-spacing: -0.01em; margin: 0; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; }
+.status { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.desk { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .desk { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+label, .lbl { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.field { display: grid; gap: 6px; }
+textarea, input[type="text"], select {
+  width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+}
+textarea { resize: vertical; min-height: 84px; }
+textarea:focus, input:focus, select:focus, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { flex: 1 1 auto; }
+button {
+  font: inherit; font-weight: 500; cursor: pointer; border-radius: 8px; padding: 8px 12px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+}
+button:hover { border-color: var(--muted); }
+button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; padding: 11px 14px; }
+button.primary:hover { filter: brightness(1.08); }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+button.small { padding: 5px 10px; font-size: 13px; }
+button.ghost { background: transparent; }
+details { border-top: 1px solid var(--line); padding-top: 12px; }
+summary { cursor: pointer; font-weight: 600; }
+details .field { margin-top: 12px; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.drafts { display: grid; gap: 20px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.plat { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 600; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.li .dot { background: var(--li); }
+.ig .dot { background: var(--ig); }
+.card-body { padding: 16px; display: grid; gap: 12px; }
+.draft-text { min-height: 220px; font-size: 15px; line-height: 1.55; background: var(--panel); }
+.meter { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter .over { color: var(--bad); font-weight: 500; }
+.meter .near { color: var(--warn); }
+.fold { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; background: var(--soft); white-space: pre-wrap; overflow-wrap: anywhere; }
+.fold .cut { color: var(--muted); font-style: italic; }
+.tags { font-family: var(--font-mono); font-size: 13px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.revise { display: flex; gap: 8px; flex-wrap: wrap; }
+.revise input { flex: 1 1 200px; }
+.extra { display: grid; gap: 6px; padding: 10px 12px; border-radius: 8px; background: var(--soft); font-size: 14px; }
+.extra b { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.empty { text-align: left; padding: 22px; display: grid; gap: 10px; }
+.empty ol { margin: 0; padding-left: 20px; color: var(--muted); }
+.sample-tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 1px 8px; }
+.angle { font-size: 14px; color: var(--muted); margin: 0; }
+.err { color: var(--bad); font-size: 14px; margin: 0; }
+.shelf { display: grid; gap: 10px; }
+.shelf-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.shelf-list li { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.shelf-list .meta { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.shelf-list .first { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chips { display: inline-flex; gap: 4px; }
+.chip { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; }
+.chip.li { color: var(--li); } .chip.ig { color: var(--ig); }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--panel); padding: 8px 14px; border-radius: 8px; font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Post Studio</h1>
+      <p class="sub">Drop in an idea. Get a LinkedIn post and an Instagram caption in your voice. Copy, then post them yourself.</p>
+    </div>
+    <span class="status" id="storeStatus">Connecting…</span>
+  </header>
+
+  <div class="desk">
+    <form class="panel" id="brief" autocomplete="off">
+      <h2>The brief</h2>
+      <div class="field">
+        <label for="idea">What's the post about?</label>
+        <textarea id="idea" rows="4" placeholder="e.g. We closed a 40,000 sq ft industrial lease in 3 weeks. The tenant almost walked over a loading dock issue."></textarea>
+      </div>
+      <div class="field">
+        <span class="lbl" id="platLbl">Platforms</span>
+        <div class="seg" role="group" aria-labelledby="platLbl">
+          <button type="button" id="pBoth" data-plat="both" aria-pressed="true">Both</button>
+          <button type="button" id="pLi" data-plat="linkedin" aria-pressed="false">LinkedIn</button>
+          <button type="button" id="pIg" data-plat="instagram" aria-pressed="false">Instagram</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="goal">Type</label>
+          <select id="goal">
+            <option>Share a lesson</option>
+            <option>Celebrate a win</option>
+            <option>Tell a story</option>
+            <option>Give an opinion</option>
+            <option>Announcement</option>
+            <option>Behind the scenes</option>
+            <option>Faith / encouragement</option>
+            <option>Ask a question</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="length">Length</label>
+          <select id="length">
+            <option value="short">Short</option>
+            <option value="medium" selected>Medium</option>
+            <option value="long">Long</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="tone">Tone</label>
+        <select id="tone">
+          <option>Warm and professional</option>
+          <option>Direct and confident</option>
+          <option>Humble and reflective</option>
+          <option>Upbeat and energetic</option>
+          <option>Plain and conversational</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="details">Details to include (optional)</label>
+        <input type="text" id="details" placeholder="Names to tag, a link, a call to action, numbers">
+      </div>
+
+      <details id="voiceBox">
+        <summary>Your voice</summary>
+        <p class="hint">Built from your voice interview with Claude and used for every draft. Edit it any time. Only you can see it.</p>
+        <div class="field">
+          <label for="who">Who you are</label>
+          <textarea id="who" rows="3" placeholder="Role, industry, what you're known for"></textarea>
+        </div>
+        <div class="field">
+          <label for="style">Personality and how you talk</label>
+          <textarea id="style" rows="4" placeholder="Traits, values, phrases you use, humor, how formal you are"></textarea>
+        </div>
+        <div class="field">
+          <label for="audience">Who you're writing for</label>
+          <input type="text" id="audience" placeholder="e.g. brokers, investors, young professionals">
+        </div>
+        <div class="field">
+          <label for="avoid">Never do this</label>
+          <input type="text" id="avoid" placeholder="e.g. no emojis on LinkedIn, no buzzwords, no &quot;thrilled to announce&quot;">
+        </div>
+        <div class="field">
+          <label for="examples">Posts you've written before (paste 1–3)</label>
+          <textarea id="examples" rows="5" placeholder="Paste real posts so drafts sound like you"></textarea>
+        </div>
+        <div class="actions">
+          <button type="button" class="small" id="saveVoice">Save voice</button>
+        </div>
+      </details>
+
+      <button type="submit" class="primary" id="go">Draft posts</button>
+      <p class="err" id="briefErr" hidden></p>
+    </form>
+
+    <section class="drafts" id="drafts" aria-live="polite"></section>
+  </div>
+
+  <section class="shelf">
+    <h2>Saved drafts</h2>
+    <ul class="shelf-list" id="shelf"></ul>
+    <p class="hint" id="shelfEmpty">Drafts you save show up here, newest first.</p>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const LIMITS = {
+    linkedin: { max: 3000, fold: 210, tags: 5 },
+    instagram: { max: 2200, fold: 125, tags: 30 }
+  };
+  const LENGTHS = {
+    short: { linkedin: "about 400-600 characters", instagram: "about 150-300 characters" },
+    medium: { linkedin: "about 900-1300 characters", instagram: "about 300-600 characters" },
+    long: { linkedin: "about 1800-2400 characters", instagram: "about 700-1200 characters" }
+  };
+
+  const SAMPLE = {
+    sample: true,
+    angle: "Example draft. Write a brief and press Draft posts to replace it.",
+    linkedin: {
+      post: "The deal almost died over a loading dock.\n\nThree weeks into a 40,000 sq ft industrial lease, the tenant's ops lead walked the site and found the dock doors were two inches too low for their trailers.\n\nWe could have argued about it. Instead we called the landlord that afternoon, priced the fix, and split it.\n\nSigned four days later.\n\nWhat I keep relearning: most deals don't fall apart on price. They fall apart on the one detail nobody walked.\n\nWhat's the small detail that almost cost you a deal?",
+      hashtags: ["#CommercialRealEstate", "#IndustrialRealEstate", "#Leasing"]
+    },
+    instagram: {
+      caption: "Two inches almost cost us a 40,000 sq ft lease. 📦\n\nThe dock doors were too low for the tenant's trailers. One phone call, one shared fix, signed four days later.\n\nWalk the site. Every time.",
+      hashtags: ["#commercialrealestate", "#industrial", "#cre", "#leasing", "#warehouse", "#realestatelife"],
+      visual: "Photo of the loading dock with a tape measure against the door frame. Carousel: 1) dock door, 2) trailer backed in after the fix, 3) handshake or signed lease (no visible numbers).",
+      altText: "A warehouse loading dock with a tape measure held against the door opening."
+    }
+  };
+
+  let state = { platform: "both", current: SAMPLE, busy: false };
+  let sample = null, db = null, col = null, voiceDoc = null;
+  let drafts = [];
+  let voice = { who: "", style: "", audience: "", avoid: "", examples: "" };
+
+  // ---------- helpers ----------
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2200);
+  }
+  function el(tag, attrs = {}, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else if (v !== false && v != null) n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const k of kids) if (k != null) n.append(k);
+    return n;
+  }
+  function normTags(tags) {
+    if (!Array.isArray(tags)) return [];
+    return tags.map(t => String(t).trim().replace(/^#*/, "#").replace(/\s+/g, "")).filter(t => t.length > 1);
+  }
+  function fullText(plat, d) {
+    const body = plat === "linkedin" ? d.post : d.caption;
+    const tags = normTags(d.hashtags);
+    return tags.length ? body.trim() + "\n\n" + tags.join(" ") : body.trim();
+  }
+  async function copyText(text, btn) {
+    try { await navigator.clipboard.writeText(text); toast("Copied"); }
+    catch (e) {
+      const ta = btn.closest(".card").querySelector("textarea");
+      if (ta) { ta.focus(); ta.select(); }
+      toast("Couldn't copy. The text is selected, press Ctrl/Cmd+C.");
+    }
+  }
+  function errMessage(e) {
+    const code = e && e.code;
+    if (code === "not_granted") return "Drafting needs permission to ask Claude. Open this page's Permissions menu to allow it.";
+    if (code === "rate_limited") return "You've hit the usage limit for now. Try again in a little while.";
+    if (code === "invalid_json") return "Claude's reply came back garbled. Press the button again.";
+    if (code === "cancelled") return "Stopped.";
+    if (code === "refused") return "Claude declined this one. Try rewording the idea.";
+    return "Something went wrong reaching Claude. Try again.";
+  }
+
+  // ---------- prompts ----------
+  function voiceBlock() {
+    const parts = [];
+    if (voice.who) parts.push("Who the author is: " + voice.who);
+    if (voice.style) parts.push("Personality and voice: " + voice.style);
+    if (voice.audience) parts.push("Audience: " + voice.audience);
+    if (voice.avoid) parts.push("Never do: " + voice.avoid);
+    if (voice.examples) parts.push("Posts the author wrote before (match this voice, rhythm and vocabulary; do not reuse their content):\n<<<\n" + voice.examples + "\n>>>");
+    return parts.length ? parts.join("\n") : "No profile given. Write as a thoughtful working professional.";
+  }
+  const RULES = {
+    linkedin: `LinkedIn rules:
+- The first two lines are the hook and must work alone, because LinkedIn cuts the post after roughly 210 characters with "see more".
+- Short paragraphs of 1-3 sentences with blank lines between them. No walls of text.
+- Concrete details over generic claims. No buzzwords ("synergy", "leverage", "game-changer"), no "I'm thrilled to announce", no "Here's the thing", no "Let that sink in".
+- At most one or two emojis, and none if the profile says so.
+- End with a takeaway or a genuine question when it fits.
+- 3 to 5 relevant hashtags, returned separately, not in the post body.`,
+    instagram: `Instagram rules:
+- The first line is the hook and must land within 125 characters, because Instagram cuts the caption there with "more".
+- Casual, warm, readable on a phone. Line breaks between short thoughts. Emojis are fine in moderation unless the profile says otherwise.
+- End with a simple call to action (save, share, comment, link in bio) when it fits.
+- 8 to 15 hashtags mixing broad and niche, returned separately, not in the caption.
+- Suggest the visual: a single photo, a carousel (list slides), or a Reel idea, plus short alt text for accessibility.`
+  };
+  function shapeFor(plats) {
+    const s = {};
+    if (plats.includes("linkedin")) s.linkedin = { post: "string", hashtags: ["#Tag"] };
+    if (plats.includes("instagram")) s.instagram = { caption: "string", hashtags: ["#tag"], visual: "string", altText: "string" };
+    s.angle = "one short sentence naming the angle you chose";
+    return JSON.stringify(s);
+  }
+  function briefBlock(b) {
+    return `Post type: ${b.goal}
+Tone: ${b.tone}
+Idea: ${b.idea}${b.details ? "\nMust include: " + b.details : ""}`;
+  }
+  function draftPrompt(b, plats) {
+    const lens = plats.map(p => `${p === "linkedin" ? "LinkedIn post" : "Instagram caption"}: ${LENGTHS[b.length][p]}`).join("\n");
+    return `You are a ghostwriter drafting social posts for one person. Write in their voice, in first person. Never invent facts, numbers, names or results that are not in the brief; if something is missing, write around it.
+
+AUTHOR PROFILE
+${voiceBlock()}
+
+BRIEF
+${briefBlock(b)}
+
+TARGET LENGTH
+${lens}
+
+${plats.map(p => RULES[p]).join("\n\n")}
+
+${plats.length > 1 ? "Write each platform natively: the Instagram caption is not a shortened copy of the LinkedIn post.\n\n" : ""}Reply with only a JSON object in exactly this shape, no other text:
+${shapeFor(plats)}`;
+  }
+  function revisePrompt(plat, d, instruction, b) {
+    const current = plat === "linkedin"
+      ? JSON.stringify({ post: d.post, hashtags: d.hashtags })
+      : JSON.stringify({ caption: d.caption, hashtags: d.hashtags, visual: d.visual, altText: d.altText });
+    return `You are a ghostwriter revising a ${plat === "linkedin" ? "LinkedIn post" : "Instagram caption"} for one person, in their voice. Never invent facts, numbers, names or results.
+
+AUTHOR PROFILE
+${voiceBlock()}
+
+ORIGINAL BRIEF
+${b ? briefBlock(b) : "(not available)"}
+
+${RULES[plat]}
+
+CURRENT DRAFT
+${current}
+
+REVISION REQUEST
+${instruction}
+
+Reply with only a JSON object with the same keys as the current draft, no other text.`;
+  }
+
+  // ---------- rendering ----------
+  function meter(plat, d) {
+    const L = LIMITS[plat];
+    const body = (plat === "linkedin" ? d.post : d.caption) || "";
+    const total = fullText(plat, d).length;
+    const firstFold = body.length;
+    const tags = normTags(d.hashtags).length;
+    const m = el("div", { class: "meter" });
+    const cls = total > L.max ? "over" : total > L.max * 0.9 ? "near" : "";
+    m.append(el("span", { class: cls, text: `${total.toLocaleString()} / ${L.max.toLocaleString()} chars` }));
+    m.append(el("span", { class: tags > L.tags ? "over" : "", text: `${tags} hashtag${tags === 1 ? "" : "s"}${plat === "instagram" ? " / 30 max" : ""}` }));
+    m.append(el("span", { text: `${body.split(/\s+/).filter(Boolean).length} words` }));
+    return m;
+  }
+  function foldPreview(plat, d) {
+    const L = LIMITS[plat];
+    const body = ((plat === "linkedin" ? d.post : d.caption) || "").trim();
+    const box = el("div", { class: "fold" });
+    if (body.length <= L.fold) { box.append(body); return box; }
+    let cut = body.slice(0, L.fold);
+    const sp = cut.lastIndexOf(" "); if (sp > L.fold * 0.6) cut = cut.slice(0, sp);
+    box.append(cut, el("span", { class: "cut", text: plat === "linkedin" ? " …see more" : " … more" }));
+    return box;
+  }
+
+  function renderCard(plat) {
+    const d = state.current[plat];
+    const name = plat === "linkedin" ? "LinkedIn" : "Instagram";
+    const card = el("article", { class: "card " + (plat === "linkedin" ? "li" : "ig") });
+    const head = el("div", { class: "card-head" },
+      el("span", { class: "plat" }, el("span", { class: "dot", "aria-hidden": "true" }), name),
+      state.current.sample ? el("span", { class: "sample-tag", text: "Example" }) : null
+    );
+    const bodyKey = plat === "linkedin" ? "post" : "caption";
+    const taId = "ta-" + plat;
+    const ta = el("textarea", { id: taId, class: "draft-text", "aria-label": name + " draft" });
+    ta.value = d[bodyKey] || "";
+    const tagsId = "tags-" + plat;
+    const tagsIn = el("input", { type: "text", id: tagsId, class: "tags", "aria-label": name + " hashtags" });
+    tagsIn.value = normTags(d.hashtags).join(" ");
+    const meterSlot = el("div");
+    const foldSlot = el("div", { class: "field" }, el("span", { class: "lbl", text: "What shows before “" + (plat === "linkedin" ? "see more" : "more") + "”" }));
+    const foldBox = el("div");
+    foldSlot.append(foldBox);
+    function refresh() {
+      d[bodyKey] = ta.value;
+      d.hashtags = tagsIn.value.split(/[\s,]+/).filter(Boolean);
+      meterSlot.replaceChildren(meter(plat, d));
+      foldBox.replaceChildren(foldPreview(plat, d));
+    }
+    ta.addEventListener("input", refresh);
+    tagsIn.addEventListener("input", refresh);
+    refresh();
+
+    const body = el("div", { class: "card-body" }, ta, meterSlot, foldSlot,
+      el("div", { class: "field" }, el("label", { for: tagsId, text: "Hashtags" }), tagsIn));
+
+    if (plat === "instagram") {
+      const vis = el("div", { class: "extra" }, el("b", { text: "Visual" }), el("span", { text: d.visual || "" }));
+      const alt = el("div", { class: "extra" }, el("b", { text: "Alt text" }), el("span", { text: d.altText || "" }));
+      if (d.visual) body.append(vis);
+      if (d.altText) body.append(alt);
+    }
+
+    const copyBtn = el("button", { type: "button", class: "small", text: "Copy " + (plat === "linkedin" ? "post" : "caption") + " + hashtags" });
+    copyBtn.addEventListener("click", () => copyText(fullText(plat, d), copyBtn));
+    const againBtn = el("button", { type: "button", class: "small ghost", text: "Another version" });
+    againBtn.addEventListener("click", () => regenerate(plat, againBtn));
+    body.append(el("div", { class: "actions" }, copyBtn, againBtn));
+
+    const revId = "rev-" + plat;
+    const revIn = el("input", { type: "text", id: revId, placeholder: "Revise: shorter, punchier hook, add a question…", "aria-label": "Revision instruction for " + name });
+    const revBtn = el("button", { type: "button", class: "small", text: "Revise" });
+    const doRevise = () => revise(plat, revIn, revBtn);
+    revBtn.addEventListener("click", doRevise);
+    revIn.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); doRevise(); } });
+    body.append(el("div", { class: "revise" }, revIn, revBtn));
+    body.append(el("p", { class: "err", id: "err-" + plat, hidden: true }));
+
+    card.append(head, body);
+    return card;
+  }
+
+  function renderDrafts() {
+    const box = $("drafts");
+    box.replaceChildren();
+    const c = state.current;
+    if (!c) return;
+    const top = el("div", { class: "actions", style: "align-items:center;justify-content:space-between" });
+    top.append(el("p", { class: "angle", text: c.angle || "" }));
+    if (!c.sample) {
+      const save = el("button", { type: "button", class: "small", id: "saveDraft", text: c.id ? "Update saved draft" : "Save draft" });
+      save.addEventListener("click", saveDraft);
+      top.append(save);
+    }
+    box.append(top);
+    for (const p of ["linkedin", "instagram"]) if (c[p]) box.append(renderCard(p));
+  }
+
+  function renderShelf() {
+    const ul = $("shelf");
+    ul.replaceChildren();
+    $("shelfEmpty").hidden = drafts.length > 0;
+    for (const d of drafts) {
+      const first = ((d.linkedin && d.linkedin.post) || (d.instagram && d.instagram.caption) || "").split("\n")[0];
+      const when = new Date(d.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const chips = el("span", { class: "chips" },
+        d.linkedin ? el("span", { class: "chip li", text: "LI" }) : null,
+        d.instagram ? el("span", { class: "chip ig", text: "IG" }) : null);
+      const open = el("button", { type: "button", class: "small", text: "Open" });
+      open.addEventListener("click", () => {
+        state.current = JSON.parse(JSON.stringify(d));
+        if (d.brief) fillBrief(d.brief);
+        renderDrafts();
+        $("drafts").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      const del = el("button", { type: "button", class: "small ghost", text: "Delete" });
+      del.addEventListener("click", async () => {
+        if (del.dataset.armed !== "1") { del.dataset.armed = "1"; del.textContent = "Confirm delete"; setTimeout(() => { del.dataset.armed = ""; del.textContent = "Delete"; }, 4000); return; }
+        await removeDraft(d.id);
+      });
+      ul.append(el("li", {}, el("span", { class: "meta", text: when }), chips, el("span", { class: "first", text: first }), open, del));
+    }
+  }
+
+  // ---------- brief ----------
+  function readBrief() {
+    return {
+      idea: $("idea").value.trim(),
+      goal: $("goal").value, tone: $("tone").value, length: $("length").value,
+      details: $("details").value.trim(), platform: state.platform
+    };
+  }
+  function fillBrief(b) {
+    $("idea").value = b.idea || ""; $("goal").value = b.goal || $("goal").value;
+    $("tone").value = b.tone || $("tone").value; $("length").value = b.length || "medium";
+    $("details").value = b.details || ""; setPlatform(b.platform || "both");
+  }
+  function setPlatform(p) {
+    state.platform = p;
+    document.querySelectorAll("[data-plat]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.plat === p)));
+  }
+  document.querySelectorAll("[data-plat]").forEach(b => b.addEventListener("click", () => setPlatform(b.dataset.plat)));
+  const platsFor = (p) => p === "both" ? ["linkedin", "instagram"] : [p];
+
+  function showBriefErr(msg) { const e = $("briefErr"); e.textContent = msg || ""; e.hidden = !msg; }
+
+  // ---------- Claude calls ----------
+  function clean(plat, d) {
+    if (!d || typeof d !== "object") return null;
+    const out = { hashtags: normTags(d.hashtags) };
+    if (plat === "linkedin") out.post = String(d.post || "");
+    else { out.caption = String(d.caption || ""); out.visual = String(d.visual || ""); out.altText = String(d.altText || ""); }
+    return out;
+  }
+
+  $("brief").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (state.busy) return;
+    const b = readBrief();
+    if (!b.idea) { showBriefErr("Write a sentence or two about what the post is about."); $("idea").focus(); return; }
+    if (!sample) { showBriefErr("Drafting isn't available in this view. Open the page on claude.ai while signed in."); return; }
+    showBriefErr("");
+    const plats = platsFor(b.platform);
+    const go = $("go");
+    state.busy = true; go.disabled = true;
+    go.replaceChildren(el("span", { class: "spinner", "aria-hidden": "true" }), "Drafting…");
+    try {
+      const res = await sample.json(draftPrompt(b, plats), { modelTier: "default", cache: false });
+      const next = { brief: b, angle: String((res && res.angle) || "") };
+      for (const p of plats) next[p] = clean(p, res && res[p]);
+      if (!plats.some(p => next[p])) throw { code: "invalid_json" };
+      state.current = next;
+      renderDrafts();
+      if (window.innerWidth <= 860) $("drafts").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      showBriefErr(errMessage(err));
+    } finally {
+      state.busy = false; go.disabled = false; go.textContent = "Draft posts";
+    }
+  });
+
+  async function regenerate(plat, btn) {
+    const c = state.current;
+    if (!sample) return;
+    const b = c.brief || readBrief();
+    if (!b.idea) { showBriefErr("Write the idea in the brief first."); return; }
+    await runCard(plat, btn, draftPrompt(b, [plat]), (res) => res && res[plat]);
+  }
+  async function revise(plat, input, btn) {
+    const instr = input.value.trim();
+    if (!instr) { input.focus(); return; }
+    if (!sample) return;
+    const ok = await runCard(plat, btn, revisePrompt(plat, state.current[plat], instr, state.current.brief), (res) => res);
+    if (ok) input.value = "";
+  }
+  async function runCard(plat, btn, prompt, pick) {
+    const errEl = $("err-" + plat);
+    const label = btn.textContent;
+    btn.disabled = true; btn.replaceChildren(el("span", { class: "spinner", "aria-hidden": "true" }), "Working…");
+    if (errEl) errEl.hidden = true;
+    try {
+      const res = await sample.json(prompt, { modelTier: "default", cache: false });
+      const d = clean(plat, pick(res));
+      if (!d || !(d.post || d.caption)) throw { code: "invalid_json" };
+      if (plat === "instagram") { d.visual = d.visual || state.current.instagram.visual; d.altText = d.altText || state.current.instagram.altText; }
+      state.current = Object.assign({}, state.current, { [plat]: d, sample: false });
+      renderDrafts();
+      return true;
+    } catch (err) {
+      btn.disabled = false; btn.textContent = label;
+      const e2 = $("err-" + plat);
+      if (e2) { e2.textContent = errMessage(err); e2.hidden = false; }
+      return false;
+    }
+  }
+
+  // ---------- storage ----------
+  function setStatus(t) { $("storeStatus").textContent = t; }
+  async function saveDraft() {
+    const c = state.current;
+    if (!c || c.sample) return;
+    const rec = JSON.parse(JSON.stringify({ brief: c.brief || null, angle: c.angle || "", linkedin: c.linkedin || null, instagram: c.instagram || null }));
+    rec.savedAt = Date.now();
+    const id = c.id || ("d_" + rec.savedAt.toString(36));
+    rec.id = id;
+    if (!col) { toast("Saving isn't available here. Copy your drafts instead."); return; }
+    try {
+      await col.doc(id).set(rec);
+      state.current.id = id;
+      drafts = [rec].concat(drafts.filter(x => x.id !== id));
+      renderShelf(); renderDrafts();
+      toast("Draft saved");
+    } catch (e) { toast("Couldn't save the draft. Try again."); }
+  }
+  async function removeDraft(id) {
+    if (!col) return;
+    try {
+      await col.doc(id).delete();
+      drafts = drafts.filter(x => x.id !== id);
+      if (state.current && state.current.id === id) delete state.current.id;
+      renderShelf(); renderDrafts();
+      toast("Draft deleted");
+    } catch (e) { toast("Couldn't delete it. Try again."); }
+  }
+  $("saveVoice").addEventListener("click", async () => {
+    voice = { who: $("who").value.trim(), style: $("style").value.trim(), audience: $("audience").value.trim(), avoid: $("avoid").value.trim(), examples: $("examples").value.trim() };
+    if (!voiceDoc) { toast("Voice is used for this visit only. Saving isn't available here."); return; }
+    try { await voiceDoc.set(Object.assign({ updatedAt: Date.now() }, voice)); toast("Voice saved"); }
+    catch (e) { toast("Couldn't save your voice. Try again."); }
+  });
+  ["who", "style", "audience", "avoid", "examples"].forEach(k => $(k).addEventListener("input", () => { voice[k] = $(k).value.trim(); }));
+
+  async function init() {
+    renderDrafts(); renderShelf();
+    if (!window.claude || !window.claude.use) { setStatus("Drafting needs claude.ai"); return; }
+    const [s, d, u] = await Promise.all([
+      claude.use("sample").catch(() => null),
+      claude.use("db").catch(() => null),
+      claude.use("user").catch(() => null)
+    ]);
+    sample = s;
+    if (!sample) $("go").title = "Drafting needs this page open on claude.ai";
+    const owner = u ? await u.isOwner().catch(() => false) : false;
+    if (!d || !owner) { setStatus(sample ? "Drafts aren't saved in this view" : "Read-only view"); return; }
+    db = d; col = db.collection("drafts"); voiceDoc = db.doc("voice/profile");
+    setStatus("Loading your drafts…");
+    const timer = setTimeout(() => setStatus("Still loading drafts…"), 10000);
+    try {
+      const [snap, vs] = await Promise.all([col.get(), voiceDoc.get()]);
+      clearTimeout(timer);
+      const v = vs.exists ? vs.data() : null;
+      if (v) {
+        voice = { who: v.who || "", style: v.style || "", audience: v.audience || "", avoid: v.avoid || "", examples: v.examples || "" };
+        for (const k of Object.keys(voice)) $(k).value = voice[k];
+      }
+      drafts = [];
+      for (const doc of snap.docs) {
+        const dv = doc.data(); if (dv && doc.id.startsWith("d_")) drafts.push(Object.assign({}, dv, { id: doc.id }));
+      }
+      drafts.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+      if (!voice.who && !voice.style) $("voiceBox").open = true;
+      renderShelf();
+      setStatus(voice.style ? "Voice loaded · saved privately" : "Add your voice before drafting");
+    } catch (e) {
+      clearTimeout(timer);
+      setStatus("Couldn't load saved drafts");
+    }
+  }
+  init();
+})();
+</script>
