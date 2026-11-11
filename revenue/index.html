@@ -1,0 +1,397 @@
+<title>Aggie Real Estate Revenue</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: maroon header band with the month's numbers, then "who pays next" on top and the payment ledger below. Palette: Aggie maroon and gold, matching the Daily Anchor dashboard. */
+:root {
+  --bg: #f8f1f0;
+  --surface: #ffffff;
+  --ink: #2a1216;
+  --muted: #75595d;
+  --line: #ecdcdb;
+  --accent: #7d1a2c;
+  --accent-soft: #f6e3e5;
+  --gold: #9a6a14;
+  --gold-soft: #fbf0dc;
+  --warn: #b0301b;
+  --warn-soft: #fde3da;
+  --ok: #2f7a45;
+  --ok-soft: #e2f3e6;
+  --on-accent: #ffffff;
+  --hero-a: #4f0a18;
+  --hero-b: #8c1d33;
+  --hero-ink: #fff7ef;
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-ui: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #170c0e; --surface: #221316; --ink: #f6e9e6; --muted: #bfa3a5; --line: #3a2226;
+  --accent: #e8798b; --accent-soft: #3a1a20; --gold: #e9b65a; --gold-soft: #2e2214;
+  --warn: #f3907a; --warn-soft: #3a1c16; --ok: #6cc184; --ok-soft: #173020; --on-accent: #2a0a10;
+  --hero-a: #2c050d; --hero-b: #6e1428; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #170c0e; --surface: #221316; --ink: #f6e9e6; --muted: #bfa3a5; --line: #3a2226;
+  --accent: #e8798b; --accent-soft: #3a1a20; --gold: #e9b65a; --gold-soft: #2e2214;
+  --warn: #f3907a; --warn-soft: #3a1c16; --ok: #6cc184; --ok-soft: #173020; --on-accent: #2a0a10;
+  --hero-a: #2c050d; --hero-b: #6e1428; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 60px; }
+h1, h2 { margin: 0; text-wrap: balance; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+header.top { border-radius: 22px; color: var(--hero-ink); padding: clamp(20px, 4vw, 32px); background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); display: grid; gap: 20px; }
+.brand { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.brand .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 12px; font-weight: 700; opacity: .8; }
+.brand h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 6vw, 44px); line-height: 1.05; }
+.hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid transparent; border-radius: 10px; padding: 9px 14px; font-weight: 600; background: var(--accent); color: var(--on-accent); }
+.btn.light { background: var(--hero-ink); color: var(--hero-a); }
+.btn.ghost-light { background: transparent; color: var(--hero-ink); border-color: color-mix(in srgb, var(--hero-ink) 45%, transparent); }
+.btn.ghost { background: transparent; color: var(--accent); border-color: var(--line); }
+.btn.small { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+.btn.danger { background: var(--warn); color: var(--on-accent); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat { background: color-mix(in srgb, var(--hero-ink) 9%, transparent); border-radius: 14px; padding: 12px 14px; min-width: 0; }
+.stat .k { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; opacity: .8; font-weight: 600; }
+.stat .v { font-family: var(--font-display); font-size: clamp(22px, 4vw, 30px); line-height: 1.15; }
+.stat .s { font-size: 13px; opacity: .8; }
+@media (max-width: 760px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+section.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-top: 18px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+.card-head h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 700; }
+.sub { color: var(--muted); font-size: 13px; }
+
+.people { display: grid; gap: 10px; }
+.person { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 14px; border-left-width: 4px; }
+.person.overdue { border-left-color: var(--warn); }
+.person.soon { border-left-color: var(--gold); }
+.person.later { border-left-color: var(--ok); }
+.person .name { font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
+.person .lab { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.person .val { font-weight: 600; }
+.person .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.pill.overdue { background: var(--warn-soft); color: var(--warn); }
+.pill.soon { background: var(--gold-soft); color: var(--gold); }
+.pill.later { background: var(--ok-soft); color: var(--ok); }
+@media (max-width: 760px) { .person { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .person .who { grid-column: 1 / -1; } .person .acts { grid-column: 1 / -1; justify-content: flex-start; } }
+
+.empty { text-align: center; padding: 26px 12px; color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; }
+.empty strong { color: var(--ink); display: block; margin-bottom: 4px; }
+
+.filters { display: flex; gap: 8px; flex-wrap: wrap; }
+select, input, textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; min-width: 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
+td.amt, th.amt { text-align: right; }
+td.note { white-space: normal; color: var(--muted); min-width: 140px; }
+tfoot td { font-weight: 700; border-bottom: 0; }
+
+.modal-back { position: fixed; inset: 0; background: rgba(20, 5, 8, .55); display: grid; place-items: center; padding: 16px; z-index: 30; }
+.modal { background: var(--surface); border-radius: 18px; padding: 22px; width: min(460px, 100%); max-height: 90vh; overflow: auto; }
+.modal h3 { font-family: var(--font-display); font-weight: 400; font-size: 24px; margin: 0 0 14px; }
+.field { display: grid; gap: 4px; margin-bottom: 12px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-acts { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.modal-acts .right { display: flex; gap: 8px; margin-left: auto; }
+.notice { background: var(--gold-soft); color: var(--ink); border-radius: 12px; padding: 10px 14px; margin-top: 14px; font-size: 14px; }
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-weight: 600; z-index: 40; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div>
+        <div class="eyebrow">Aggie Real Estate</div>
+        <h1>Revenue Tracker</h1>
+      </div>
+      <div class="hero-actions">
+        <button class="btn light" id="btn-pay" type="button">Record payment</button>
+        <button class="btn ghost-light" id="btn-person" type="button">Add person</button>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+  <div id="banner"></div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Next payments</h2>
+      <span class="sub">Sorted by due date</span>
+    </div>
+    <div class="people" id="people">
+      <div class="empty"><strong>Loading your people…</strong>Each person you add shows here with their last payment and next due date.</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Payment history</h2>
+      <div class="filters">
+        <select id="f-person" aria-label="Filter by person"><option value="">Everyone</option></select>
+        <select id="f-range" aria-label="Filter by date">
+          <option value="all">All time</option>
+          <option value="month">This month</option>
+          <option value="year">This year</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap" id="ledger"></div>
+  </section>
+</div>
+<div id="modal-root"></div>
+<div id="toast" hidden></div>
+
+<script>
+const S = { db: null, people: [], payments: [], loaded: false, missing: false };
+const $ = (q) => document.querySelector(q);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n) => (Number(n) || 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: (Number(n) % 1) ? 2 : 0 });
+const FREQ = { monthly: "Monthly", biweekly: "Every 2 weeks", weekly: "Weekly" };
+const METHODS = ["Cash", "Check", "Zelle", "Venmo", "Cash App", "Bank transfer", "Other"];
+
+/* Dates are stored as YYYY-MM-DD and read in local time. */
+const pad = (n) => String(n).padStart(2, "0");
+const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = (s) => { const [y, m, d] = String(s).split("-").map(Number); return new Date(y, (m || 1) - 1, d || 1); };
+const today = () => iso(new Date());
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+const fmtDate = (s) => s ? parse(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: parse(s).getFullYear() === new Date().getFullYear() ? undefined : "numeric" }) : "—";
+
+/* The k-th due date after the first one. Monthly keeps the same day of month, clamped for short months. */
+function dueAt(p, k) {
+  const a = parse(p.firstDue);
+  if (p.frequency === "weekly") return addDays(p.firstDue, 7 * k);
+  if (p.frequency === "biweekly") return addDays(p.firstDue, 14 * k);
+  const y = a.getFullYear(), m = a.getMonth() + k;
+  const last = new Date(y, m + 1, 0).getDate();
+  return iso(new Date(y, m, Math.min(a.getDate(), last)));
+}
+const periodDays = (p) => p.frequency === "weekly" ? 7 : p.frequency === "biweekly" ? 14 : 30;
+
+/* Each full payment amount covers one due date, in order, starting from the first due date.
+   Payments made up to one period before the first due date count toward it. */
+function status(p) {
+  const rate = Number(p.amount) || 0;
+  const start = addDays(p.firstDue, -periodDays(p));
+  const mine = S.payments.filter((x) => x.personId === p.id).sort((a, b) => b.date.localeCompare(a.date));
+  const counted = mine.filter((x) => x.date >= start).reduce((t, x) => t + (Number(x.amount) || 0), 0);
+  const covered = rate > 0 ? Math.floor((counted + 0.005) / rate) : 0;
+  const partial = rate > 0 ? counted - covered * rate : 0;
+  const next = dueAt(p, covered);
+  const days = daysBetween(today(), next);
+  const state = days < 0 ? "overdue" : days <= 7 ? "soon" : "later";
+  return { last: mine[0] || null, next, days, state, partial: partial > 0.004 ? partial : 0, owed: rate - (partial > 0.004 ? partial : 0) };
+}
+function dueLabel(st) {
+  if (st.days < 0) return `${-st.days} day${st.days === -1 ? "" : "s"} late`;
+  if (st.days === 0) return "Due today";
+  if (st.days === 1) return "Due tomorrow";
+  return `In ${st.days} days`;
+}
+
+function render() { renderStats(); renderPeople(); renderLedger(); renderFilter(); }
+
+function renderStats() {
+  const t = today(), ym = t.slice(0, 7), y = t.slice(0, 4);
+  const month = S.payments.filter((x) => x.date.startsWith(ym)).reduce((s, x) => s + Number(x.amount || 0), 0);
+  const year = S.payments.filter((x) => x.date.startsWith(y)).reduce((s, x) => s + Number(x.amount || 0), 0);
+  let expected = 0;
+  for (const p of S.people.filter((p) => p.active !== false)) {
+    for (let k = 0; k < 400; k++) { const d = dueAt(p, k); if (d.slice(0, 7) > ym) break; if (d.startsWith(ym)) expected += Number(p.amount) || 0; }
+  }
+  const sts = S.people.filter((p) => p.active !== false).map((p) => ({ p, st: status(p) }));
+  const late = sts.filter((x) => x.st.state === "overdue");
+  const lateAmt = late.reduce((s, x) => s + x.st.owed, 0);
+  const nextUp = sts.filter((x) => x.st.days >= 0).sort((a, b) => a.st.next.localeCompare(b.st.next))[0];
+  const monthName = new Date().toLocaleDateString("en-US", { month: "long" });
+  $("#stats").innerHTML = `
+    <div class="stat"><div class="k">Collected in ${monthName}</div><div class="v num">${money(month)}</div><div class="s num">of ${money(expected)} scheduled</div></div>
+    <div class="stat"><div class="k">Collected in ${y}</div><div class="v num">${money(year)}</div><div class="s">${S.payments.filter((x) => x.date.startsWith(y)).length} payments</div></div>
+    <div class="stat"><div class="k">Overdue</div><div class="v num">${late.length}</div><div class="s num">${late.length ? money(lateAmt) + " owed" : "Everyone is current"}</div></div>
+    <div class="stat"><div class="k">Next payment</div><div class="v">${nextUp ? fmtDate(nextUp.st.next) : "—"}</div><div class="s">${nextUp ? esc(nextUp.p.name) + " · " + money(nextUp.st.owed) : "Nothing scheduled"}</div></div>`;
+}
+
+function renderPeople() {
+  const el = $("#people");
+  if (S.missing) { el.innerHTML = `<div class="empty"><strong>Saving isn't available here.</strong>Open this page on claude.ai while signed in to see and record payments.</div>`; return; }
+  if (!S.loaded) return;
+  const active = S.people.filter((p) => p.active !== false);
+  if (!active.length) { el.innerHTML = `<div class="empty"><strong>No one added yet.</strong>Tap <b>Add person</b>, enter their name, how much they pay and when it's due. Then record payments as they come in.</div>`; return; }
+  const rows = active.map((p) => ({ p, st: status(p) })).sort((a, b) => a.st.next.localeCompare(b.st.next) || a.p.name.localeCompare(b.p.name));
+  el.innerHTML = rows.map(({ p, st }) => `
+    <div class="person ${st.state}">
+      <div class="who">
+        <div class="name">${esc(p.name)}</div>
+        <div class="sub">${esc(p.property || "No property listed")} · ${money(p.amount)} ${esc((FREQ[p.frequency] || "Monthly").toLowerCase())}</div>
+      </div>
+      <div>
+        <div class="lab">Last paid</div>
+        <div class="val num">${st.last ? money(st.last.amount) : "No payments yet"}</div>
+        <div class="sub">${st.last ? fmtDate(st.last.date) + (st.last.method ? " · " + esc(st.last.method) : "") : "&nbsp;"}</div>
+      </div>
+      <div>
+        <div class="lab">Next due</div>
+        <div class="val num">${fmtDate(st.next)} · ${money(st.owed)}</div>
+        <div><span class="pill ${st.state}">${dueLabel(st)}</span>${st.partial ? ` <span class="sub num">${money(st.partial)} paid so far</span>` : ""}</div>
+      </div>
+      <div class="acts">
+        <button class="btn small" type="button" data-pay="${esc(p.id)}">Record payment</button>
+        <button class="btn small ghost" type="button" data-edit="${esc(p.id)}">Edit</button>
+      </div>
+    </div>`).join("");
+}
+
+function renderFilter() {
+  const sel = $("#f-person"), cur = sel.value;
+  const names = [...new Map(S.people.map((p) => [p.id, p.name])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  sel.innerHTML = `<option value="">Everyone</option>` + names.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join("");
+  sel.value = names.some(([id]) => id === cur) ? cur : "";
+}
+
+function renderLedger() {
+  const el = $("#ledger");
+  if (!S.loaded || S.missing) { el.innerHTML = ""; return; }
+  const who = $("#f-person").value, range = $("#f-range").value, t = today();
+  let list = S.payments.slice();
+  if (who) list = list.filter((x) => x.personId === who);
+  if (range === "month") list = list.filter((x) => x.date.startsWith(t.slice(0, 7)));
+  if (range === "year") list = list.filter((x) => x.date.startsWith(t.slice(0, 4)));
+  list.sort((a, b) => b.date.localeCompare(a.date) || String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  if (!list.length) { el.innerHTML = `<div class="empty"><strong>No payments here yet.</strong>Payments you record show up with the date, name and amount.</div>`; return; }
+  const total = list.reduce((s, x) => s + Number(x.amount || 0), 0);
+  el.innerHTML = `<table>
+    <thead><tr><th>Date paid</th><th>Name</th><th class="amt">Amount</th><th>Method</th><th>Note</th><th></th></tr></thead>
+    <tbody>${list.map((x) => `<tr>
+      <td class="num">${fmtDate(x.date)}</td>
+      <td>${esc(nameOf(x))}</td>
+      <td class="amt num">${money(x.amount)}</td>
+      <td>${esc(x.method || "")}</td>
+      <td class="note">${esc(x.note || "")}</td>
+      <td><button class="btn small ghost" type="button" data-editpay="${esc(x.id)}">Edit</button></td>
+    </tr>`).join("")}</tbody>
+    <tfoot><tr><td>Total</td><td class="sub">${list.length} payment${list.length === 1 ? "" : "s"}</td><td class="amt num">${money(total)}</td><td colspan="3"></td></tr></tfoot>
+  </table>`;
+}
+const nameOf = (x) => (S.people.find((p) => p.id === x.personId) || {}).name || x.personName || "Removed person";
+
+/* ---------- forms ---------- */
+function closeModal() { $("#modal-root").innerHTML = ""; }
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2400); }
+const fail = () => toast("Couldn't save. Check your connection and try again.");
+function needDb() { if (!S.db) { toast("Saving isn't available in this view."); return false; } return true; }
+
+function personForm(p) {
+  const isNew = !p;
+  p = p || { name: "", property: "", amount: "", frequency: "monthly", firstDue: today(), note: "" };
+  $("#modal-root").innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="pm-title"><form class="modal" id="person-form">
+    <h3 id="pm-title">${isNew ? "Add person" : "Edit " + esc(p.name)}</h3>
+    <div class="field"><label for="p-name">Name</label><input id="p-name" required maxlength="80" value="${esc(p.name)}" placeholder="e.g. Marcus Lee"></div>
+    <div class="field"><label for="p-prop">Property or unit</label><input id="p-prop" maxlength="80" value="${esc(p.property)}" placeholder="e.g. 1204 Holleman Dr, Room B"></div>
+    <div class="row2">
+      <div class="field"><label for="p-amt">Payment amount ($)</label><input id="p-amt" type="number" min="0" step="0.01" required value="${esc(p.amount)}"></div>
+      <div class="field"><label for="p-freq">How often</label><select id="p-freq">${Object.entries(FREQ).map(([k, v]) => `<option value="${k}"${p.frequency === k ? " selected" : ""}>${v}</option>`).join("")}</select></div>
+    </div>
+    <div class="field"><label for="p-first">First due date</label><input id="p-first" type="date" required value="${esc(p.firstDue)}"><span class="sub">Each payment of the full amount covers the next due date after this one.</span></div>
+    <div class="field"><label for="p-note">Notes</label><textarea id="p-note" rows="2" maxlength="400">${esc(p.note || "")}</textarea></div>
+    <div class="modal-acts">
+      ${isNew ? "" : `<button class="btn ghost" type="button" id="p-remove">Remove</button>`}
+      <div class="right"><button class="btn ghost" type="button" id="p-cancel">Cancel</button><button class="btn" type="submit">${isNew ? "Add person" : "Save"}</button></div>
+    </div>
+  </form></div>`;
+  $("#p-name").focus();
+  $("#p-cancel").onclick = closeModal;
+  if (!isNew) $("#p-remove").onclick = (e) => {
+    const b = e.currentTarget;
+    if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Tap again to remove"; b.className = "btn danger"; return; }
+    if (!needDb()) return;
+    S.db.doc("people/" + p.id).update({ active: false }).then(() => { closeModal(); toast(p.name + " removed. Their payments stay in the history."); }).catch(fail);
+  };
+  $("#person-form").onsubmit = (e) => {
+    e.preventDefault();
+    if (!needDb()) return;
+    const body = { name: $("#p-name").value.trim(), property: $("#p-prop").value.trim(), amount: Number($("#p-amt").value) || 0, frequency: $("#p-freq").value, firstDue: $("#p-first").value || today(), note: $("#p-note").value.trim(), active: true };
+    if (!body.name) return;
+    const ref = isNew ? S.db.collection("people").doc() : S.db.doc("people/" + p.id);
+    (isNew ? ref.set({ ...body, createdAt: new Date().toISOString() }) : ref.update(body)).then(() => { closeModal(); toast(isNew ? body.name + " added" : "Saved"); }).catch(fail);
+  };
+}
+
+function paymentForm(opts) {
+  const active = S.people.filter((p) => p.active !== false).sort((a, b) => a.name.localeCompare(b.name));
+  const x = opts.payment;
+  if (!x && !active.length) { toast("Add a person first."); personForm(); return; }
+  const pid = x ? x.personId : (opts.personId || active[0].id);
+  const prefill = (id) => { const p = S.people.find((q) => q.id === id); return p ? status(p).owed : ""; };
+  const list = x && !active.some((p) => p.id === pid) ? [{ id: pid, name: nameOf(x) }, ...active] : active;
+  $("#modal-root").innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="pay-title"><form class="modal" id="pay-form">
+    <h3 id="pay-title">${x ? "Edit payment" : "Record payment"}</h3>
+    <div class="field"><label for="y-person">Name</label><select id="y-person">${list.map((p) => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></div>
+    <div class="row2">
+      <div class="field"><label for="y-amt">Amount ($)</label><input id="y-amt" type="number" min="0" step="0.01" required value="${esc(x ? x.amount : prefill(pid))}"></div>
+      <div class="field"><label for="y-date">Date paid</label><input id="y-date" type="date" required value="${esc(x ? x.date : today())}"></div>
+    </div>
+    <div class="field"><label for="y-method">Method</label><select id="y-method">${METHODS.map((m) => `<option${(x ? x.method : "Zelle") === m ? " selected" : ""}>${m}</option>`).join("")}</select></div>
+    <div class="field"><label for="y-note">Note</label><input id="y-note" maxlength="200" value="${esc(x ? x.note : "")}" placeholder="Optional, e.g. check #1042"></div>
+    <div class="modal-acts">
+      ${x ? `<button class="btn ghost" type="button" id="y-del">Delete</button>` : ""}
+      <div class="right"><button class="btn ghost" type="button" id="y-cancel">Cancel</button><button class="btn" type="submit">${x ? "Save" : "Record payment"}</button></div>
+    </div>
+  </form></div>`;
+  $("#y-amt").focus();
+  $("#y-cancel").onclick = closeModal;
+  if (!x) $("#y-person").onchange = () => { $("#y-amt").value = prefill($("#y-person").value); };
+  if (x) $("#y-del").onclick = (e) => {
+    const b = e.currentTarget;
+    if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Tap again to delete"; b.className = "btn danger"; return; }
+    if (!needDb()) return;
+    S.db.doc("payments/" + x.id).delete().then(() => { closeModal(); toast("Payment deleted"); }).catch(fail);
+  };
+  $("#pay-form").onsubmit = (e) => {
+    e.preventDefault();
+    if (!needDb()) return;
+    const personId = $("#y-person").value;
+    const body = { personId, personName: (S.people.find((p) => p.id === personId) || {}).name || (x && x.personName) || "", amount: Number($("#y-amt").value) || 0, date: $("#y-date").value || today(), method: $("#y-method").value, note: $("#y-note").value.trim() };
+    const ref = x ? S.db.doc("payments/" + x.id) : S.db.collection("payments").doc();
+    (x ? ref.update(body) : ref.set({ ...body, createdAt: new Date().toISOString() })).then(() => { closeModal(); toast(x ? "Payment saved" : money(body.amount) + " from " + body.personName + " recorded"); }).catch(fail);
+  };
+}
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.id === "btn-pay") paymentForm({});
+  else if (t.id === "btn-person") personForm();
+  else if (t.dataset.pay) paymentForm({ personId: t.dataset.pay });
+  else if (t.dataset.edit) personForm(S.people.find((p) => p.id === t.dataset.edit));
+  else if (t.dataset.editpay) paymentForm({ payment: S.payments.find((x) => x.id === t.dataset.editpay) });
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+$("#f-person").onchange = renderLedger;
+$("#f-range").onchange = renderLedger;
+
+render();
+(async () => {
+  const timer = setTimeout(() => { if (!S.loaded) { S.missing = true; render(); } }, 10000);
+  const db = window.claude ? await claude.use("db") : null;
+  if (!db) { clearTimeout(timer); S.missing = true; render(); return; }
+  S.db = db;
+  let got = 0;
+  const done = () => { if (++got >= 2) { clearTimeout(timer); S.loaded = true; S.missing = false; } render(); };
+  const err = () => { clearTimeout(timer); $("#banner").innerHTML = `<p class="notice">Couldn't load your data. Check your connection, then reopen the page.</p>`; };
+  let a = false, b = false;
+  db.collection("people").onSnapshot((s) => { S.people = s.docs.map((d) => ({ id: d.id, ...d.data() })); if (!a) { a = true; done(); } else render(); }, err);
+  db.collection("payments").onSnapshot((s) => { S.payments = s.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => x.date); if (!b) { b = true; done(); } else render(); }, err);
+})();
+</script>

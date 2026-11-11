@@ -31,3 +31,7 @@ A personal daily dashboard that runs inside Claude as a private claude.ai artifa
 - Calendar editing and deleting are done by asking Claude in a conversation, always with confirmation first.
 
 Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved.
+
+## Revenue tracker
+
+`revenue/index.html` is a separate private artifact for Aggie Real Estate rent and board payments. Add each person by name with their amount, how often they pay (monthly, every 2 weeks, weekly) and their first due date. Record payments with the date paid, amount and method. The page shows each person's last payment and next due date (late, due within 7 days, or later), this month's and this year's totals, and a filterable payment history. Each full payment covers the next due date in order, so a partial payment shows what's still owed. People and payments live in the artifact's data store, not in this repo.
