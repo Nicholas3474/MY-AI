@@ -103,6 +103,10 @@ tfoot td { font-weight: 700; border-bottom: 0; }
 .field { display: grid; gap: 4px; margin-bottom: 12px; }
 .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal.wide { width: min(620px, 100%); }
+.past-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.past-row .past-x { margin-top: 10px; }
+@media (max-width: 560px) { .past-row { grid-template-columns: 1fr 1fr; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--line); } .past-row .past-x { margin-top: 0; justify-self: start; } }
 .modal-acts { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
 .modal-acts .right { display: flex; gap: 8px; margin-left: auto; }
 .notice { background: var(--gold-soft); color: var(--ink); border-radius: 12px; padding: 10px 14px; margin-top: 14px; font-size: 14px; }
@@ -118,6 +122,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
       </div>
       <div class="hero-actions">
         <button class="btn light" id="btn-pay" type="button">Record payment</button>
+        <button class="btn ghost-light" id="btn-past" type="button">Add past payments</button>
         <button class="btn ghost-light" id="btn-person" type="button">Add board member</button>
       </div>
     </div>
@@ -187,19 +192,24 @@ function dueAt(p, k) {
 }
 const periodDays = (p) => ({ weekly: 7, biweekly: 14, quarterly: 91, semiannual: 182, yearly: 365 })[p.frequency] || 30;
 
-/* Each full payment amount covers one due date, in order, starting from the first due date.
-   Payments made up to one period before the first due date count toward it. */
+/* Each lump sum covers one due date. The next due date is the first scheduled date after the latest payment,
+   allowing a payment to come in up to a third of a period early (about 4 months for yearly dues).
+   It is never earlier than the payment date set on the member. */
+const MIN_PAYMENT = 2500;
 function status(p) {
-  const rate = Number(p.amount) || 0;
-  const start = addDays(p.firstDue, -periodDays(p));
   const mine = S.payments.filter((x) => x.personId === p.id).sort((a, b) => b.date.localeCompare(a.date));
-  const counted = mine.filter((x) => x.date >= start).reduce((t, x) => t + (Number(x.amount) || 0), 0);
-  const covered = rate > 0 ? Math.floor((counted + 0.005) / rate) : 0;
-  const partial = rate > 0 ? counted - covered * rate : 0;
-  const next = dueAt(p, covered);
+  const last = mine[0] || null;
+  let next = p.firstDue;
+  if (last) {
+    const cutoff = addDays(last.date, Math.round(periodDays(p) / 3));
+    let k = Math.floor(daysBetween(p.firstDue, cutoff) / periodDays(p)) - 2;
+    while (dueAt(p, k) <= cutoff) k++;
+    next = dueAt(p, k);
+    if (next < p.firstDue) next = p.firstDue;
+  }
   const days = daysBetween(today(), next);
   const state = days < 0 ? "overdue" : days <= 7 ? "soon" : "later";
-  return { last: mine[0] || null, next, days, state, partial: partial > 0.004 ? partial : 0, owed: rate - (partial > 0.004 ? partial : 0) };
+  return { last, next, days, state, owed: Number(p.amount) || 0 };
 }
 function dueLabel(st) {
   if (st.days < 0) return `${-st.days} day${st.days === -1 ? "" : "s"} late`;
@@ -252,7 +262,7 @@ function renderPeople() {
       <div>
         <div class="lab">Next due</div>
         <div class="val num">${fmtDate(st.next)} · ${money(st.owed)}</div>
-        <div><span class="pill ${st.state}">${dueLabel(st)}</span>${st.partial ? ` <span class="sub num">${money(st.partial)} paid so far</span>` : ""}</div>
+        <div><span class="pill ${st.state}">${dueLabel(st)}</span></div>
       </div>
       <div class="acts">
         <button class="btn small" type="button" data-pay="${esc(p.id)}">Record payment</button>
@@ -302,16 +312,16 @@ function needDb() { if (!S.db) { toast("Saving isn't available in this view."); 
 
 function personForm(p) {
   const isNew = !p;
-  p = p || { name: "", role: "", amount: "", frequency: "monthly", firstDue: today(), note: "" };
+  p = p || { name: "", role: "", amount: MIN_PAYMENT, frequency: "yearly", firstDue: today(), note: "" };
   $("#modal-root").innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="pm-title"><form class="modal" id="person-form">
     <h3 id="pm-title">${isNew ? "Add board member" : "Edit " + esc(p.name)}</h3>
     <div class="field"><label for="p-name">Name</label><input id="p-name" required maxlength="80" value="${esc(p.name)}" placeholder="e.g. Marcus Lee"></div>
     <div class="field"><label for="p-prop">Board role (optional)</label><input id="p-prop" maxlength="80" value="${esc(p.role || p.property || "")}" placeholder="e.g. Treasurer"></div>
     <div class="row2">
-      <div class="field"><label for="p-amt">Their payment amount ($)</label><input id="p-amt" type="number" min="0" step="0.01" required value="${esc(p.amount)}"></div>
+      <div class="field"><label for="p-amt">Their lump sum ($)</label><input id="p-amt" type="number" min="${MIN_PAYMENT}" step="0.01" required value="${esc(p.amount)}"><span class="sub">At least $2,500</span></div>
       <div class="field"><label for="p-freq">How often</label><select id="p-freq">${Object.entries(FREQ).map(([k, v]) => `<option value="${k}"${p.frequency === k ? " selected" : ""}>${v}</option>`).join("")}</select></div>
     </div>
-    <div class="field"><label for="p-first">Their payment date</label><input id="p-first" type="date" required value="${esc(p.firstDue)}"><span class="sub">The first due date you're tracking for this member. Later due dates repeat on the same day, as often as they pay. Each full payment covers one due date, in order.</span></div>
+    <div class="field"><label for="p-first">Their payment date</label><input id="p-first" type="date" required value="${esc(p.firstDue)}"><span class="sub">Any date this member's payment is due, past or upcoming. Due dates repeat on that day, as often as they pay. Their next due date is the first one after their latest payment.</span></div>
     <div class="field"><label for="p-note">Notes</label><textarea id="p-note" rows="2" maxlength="400">${esc(p.note || "")}</textarea></div>
     <div class="modal-acts">
       ${isNew ? "" : `<button class="btn ghost" type="button" id="p-remove">Remove</button>`}
@@ -336,6 +346,46 @@ function personForm(p) {
   };
 }
 
+/* Enter several earlier payments for one board member at once. */
+function pastForm() {
+  const active = S.people.filter((p) => p.active !== false).sort((a, b) => a.name.localeCompare(b.name));
+  if (!active.length) { toast("Add a board member first."); personForm(); return; }
+  let n = 0;
+  const amtOf = () => (S.people.find((p) => p.id === $("#b-person").value) || {}).amount || MIN_PAYMENT;
+  const row = (amt) => { n++; return `<div class="past-row" data-row="${n}">
+    <div class="field"><label for="b-date-${n}">Date paid</label><input id="b-date-${n}" type="date" required max="${today()}"></div>
+    <div class="field"><label for="b-amt-${n}">Amount ($)</label><input id="b-amt-${n}" type="number" min="${MIN_PAYMENT}" step="0.01" required value="${esc(amt)}"></div>
+    <div class="field"><label for="b-method-${n}">Method</label><select id="b-method-${n}">${METHODS.map((m) => `<option${m === "Check" ? " selected" : ""}>${m}</option>`).join("")}</select></div>
+    <button class="btn small ghost past-x" type="button" data-remove-row="${n}" aria-label="Remove this payment">Remove</button>
+  </div>`; };
+  $("#modal-root").innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="b-title"><form class="modal wide" id="past-form">
+    <h3 id="b-title">Add past payments</h3>
+    <div class="field"><label for="b-person">Board member</label><select id="b-person">${active.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></div>
+    <p class="sub" style="margin:0 0 10px">Add one row for each lump sum they've paid. Each one must be at least $2,500.</p>
+    <div id="past-rows">${row(active[0].amount || MIN_PAYMENT)}</div>
+    <button class="btn small ghost" type="button" id="b-more">Add another payment</button>
+    <div class="modal-acts" style="margin-top:14px">
+      <div class="right"><button class="btn ghost" type="button" id="b-cancel">Cancel</button><button class="btn" type="submit" id="b-save">Save payments</button></div>
+    </div>
+  </form></div>`;
+  $("#b-date-1").focus();
+  $("#b-cancel").onclick = closeModal;
+  $("#b-person").onchange = () => { document.querySelectorAll('#past-rows input[type="number"]').forEach((i) => { i.value = amtOf(); }); };
+  $("#b-more").onclick = () => { $("#past-rows").insertAdjacentHTML("beforeend", row(amtOf())); $(`#b-date-${n}`).focus(); };
+  $("#past-rows").onclick = (e) => { const b = e.target.closest("[data-remove-row]"); if (b && document.querySelectorAll(".past-row").length > 1) b.closest(".past-row").remove(); };
+  $("#past-form").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!needDb()) return;
+    const personId = $("#b-person").value, personName = (S.people.find((p) => p.id === personId) || {}).name || "";
+    const rows = [...document.querySelectorAll(".past-row")].map((r) => { const i = r.dataset.row; return { personId, personName, date: $(`#b-date-${i}`).value, amount: Number($(`#b-amt-${i}`).value) || 0, method: $(`#b-method-${i}`).value, note: "", createdAt: new Date().toISOString() }; });
+    $("#b-save").disabled = true;
+    try {
+      for (const r of rows) await S.db.collection("payments").doc().set(r);
+      closeModal(); toast(`${rows.length} payment${rows.length === 1 ? "" : "s"} saved for ${personName}`);
+    } catch { $("#b-save").disabled = false; fail(); }
+  };
+}
+
 function paymentForm(opts) {
   const active = S.people.filter((p) => p.active !== false).sort((a, b) => a.name.localeCompare(b.name));
   const x = opts.payment;
@@ -347,7 +397,7 @@ function paymentForm(opts) {
     <h3 id="pay-title">${x ? "Edit payment" : "Record payment"}</h3>
     <div class="field"><label for="y-person">Board member</label><select id="y-person">${list.map((p) => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></div>
     <div class="row2">
-      <div class="field"><label for="y-amt">Amount ($)</label><input id="y-amt" type="number" min="0" step="0.01" required value="${esc(x ? x.amount : prefill(pid))}"></div>
+      <div class="field"><label for="y-amt">Amount ($)</label><input id="y-amt" type="number" min="${MIN_PAYMENT}" step="0.01" required value="${esc(x ? x.amount : prefill(pid))}"><span class="sub">At least $2,500</span></div>
       <div class="field"><label for="y-date">Date paid</label><input id="y-date" type="date" required value="${esc(x ? x.date : today())}"></div>
     </div>
     <div class="field"><label for="y-method">Method</label><select id="y-method">${METHODS.map((m) => `<option${(x ? x.method : "Zelle") === m ? " selected" : ""}>${m}</option>`).join("")}</select></div>
@@ -380,6 +430,7 @@ document.addEventListener("click", (e) => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.id === "btn-pay") paymentForm({});
   else if (t.id === "btn-person") personForm();
+  else if (t.id === "btn-past") pastForm();
   else if (t.dataset.pay) paymentForm({ personId: t.dataset.pay });
   else if (t.dataset.edit) personForm(S.people.find((p) => p.id === t.dataset.edit));
   else if (t.dataset.editpay) paymentForm({ payment: S.payments.find((x) => x.id === t.dataset.editpay) });
