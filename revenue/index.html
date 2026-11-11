@@ -143,7 +143,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
         <select id="f-range" aria-label="Filter by date">
           <option value="all">All time</option>
           <option value="month">This month</option>
-          <option value="year">This year</option>
+          <option value="year">This fiscal year</option>
         </select>
       </div>
     </div>
@@ -168,6 +168,11 @@ const parse = (s) => { const [y, m, d] = String(s).split("-").map(Number); retur
 const today = () => iso(new Date());
 const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
 const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+/* Fiscal year runs Aug 1 through Jul 31. */
+function fiscalYear(s) {
+  const y = Number(s.slice(0, 4)), first = Number(s.slice(5, 7)) >= 8 ? y : y - 1;
+  return { start: `${first}-08-01`, end: `${first + 1}-07-31`, label: `FY ${first}–${String(first + 1).slice(2)}` };
+}
 const fmtDate = (s) => s ? parse(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: parse(s).getFullYear() === new Date().getFullYear() ? undefined : "numeric" }) : "—";
 
 /* The k-th due date after the first one. Monthly keeps the same day of month, clamped for short months. */
@@ -205,9 +210,10 @@ function dueLabel(st) {
 function render() { renderStats(); renderPeople(); renderLedger(); renderFilter(); }
 
 function renderStats() {
-  const t = today(), ym = t.slice(0, 7), y = t.slice(0, 4);
+  const t = today(), ym = t.slice(0, 7), fy = fiscalYear(t);
   const month = S.payments.filter((x) => x.date.startsWith(ym)).reduce((s, x) => s + Number(x.amount || 0), 0);
-  const year = S.payments.filter((x) => x.date.startsWith(y)).reduce((s, x) => s + Number(x.amount || 0), 0);
+  const fyPays = S.payments.filter((x) => x.date >= fy.start && x.date <= fy.end);
+  const year = fyPays.reduce((s, x) => s + Number(x.amount || 0), 0);
   let expected = 0;
   for (const p of S.people.filter((p) => p.active !== false)) {
     for (let k = 0; k < 400; k++) { const d = dueAt(p, k); if (d.slice(0, 7) > ym) break; if (d.startsWith(ym)) expected += Number(p.amount) || 0; }
@@ -219,7 +225,7 @@ function renderStats() {
   const monthName = new Date().toLocaleDateString("en-US", { month: "long" });
   $("#stats").innerHTML = `
     <div class="stat"><div class="k">Collected in ${monthName}</div><div class="v num">${money(month)}</div><div class="s num">of ${money(expected)} scheduled</div></div>
-    <div class="stat"><div class="k">Collected in ${y}</div><div class="v num">${money(year)}</div><div class="s">${S.payments.filter((x) => x.date.startsWith(y)).length} payments</div></div>
+    <div class="stat"><div class="k">Collected in ${fy.label}</div><div class="v num">${money(year)}</div><div class="s">${fyPays.length} payment${fyPays.length === 1 ? "" : "s"} since ${fmtDate(fy.start)}</div></div>
     <div class="stat"><div class="k">Overdue</div><div class="v num">${late.length}</div><div class="s num">${late.length ? money(lateAmt) + " owed" : "Everyone is current"}</div></div>
     <div class="stat"><div class="k">Next payment</div><div class="v">${nextUp ? fmtDate(nextUp.st.next) : "—"}</div><div class="s">${nextUp ? esc(nextUp.p.name) + " · " + money(nextUp.st.owed) : "Nothing scheduled"}</div></div>`;
 }
@@ -268,7 +274,7 @@ function renderLedger() {
   let list = S.payments.slice();
   if (who) list = list.filter((x) => x.personId === who);
   if (range === "month") list = list.filter((x) => x.date.startsWith(t.slice(0, 7)));
-  if (range === "year") list = list.filter((x) => x.date.startsWith(t.slice(0, 4)));
+  if (range === "year") { const fy = fiscalYear(t); list = list.filter((x) => x.date >= fy.start && x.date <= fy.end); }
   list.sort((a, b) => b.date.localeCompare(a.date) || String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   if (!list.length) { el.innerHTML = `<div class="empty"><strong>No payments here yet.</strong>Payments you record show up with the date, name and amount.</div>`; return; }
   const total = list.reduce((s, x) => s + Number(x.amount || 0), 0);
