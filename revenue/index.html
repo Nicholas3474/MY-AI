@@ -118,7 +118,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
       </div>
       <div class="hero-actions">
         <button class="btn light" id="btn-pay" type="button">Record payment</button>
-        <button class="btn ghost-light" id="btn-person" type="button">Add person</button>
+        <button class="btn ghost-light" id="btn-person" type="button">Add board member</button>
       </div>
     </div>
     <div class="stats" id="stats"></div>
@@ -131,7 +131,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
       <span class="sub">Sorted by due date</span>
     </div>
     <div class="people" id="people">
-      <div class="empty"><strong>Loading your people…</strong>Each person you add shows here with their last payment and next due date.</div>
+      <div class="empty"><strong>Loading your board…</strong>Each board member shows here with their last payment and next due date.</div>
     </div>
   </section>
 
@@ -139,7 +139,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
     <div class="card-head">
       <h2>Payment history</h2>
       <div class="filters">
-        <select id="f-person" aria-label="Filter by person"><option value="">Everyone</option></select>
+        <select id="f-person" aria-label="Filter by board member"><option value="">All members</option></select>
         <select id="f-range" aria-label="Filter by date">
           <option value="all">All time</option>
           <option value="month">This month</option>
@@ -158,7 +158,8 @@ const S = { db: null, people: [], payments: [], loaded: false, missing: false };
 const $ = (q) => document.querySelector(q);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const money = (n) => (Number(n) || 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: (Number(n) % 1) ? 2 : 0 });
-const FREQ = { monthly: "Monthly", biweekly: "Every 2 weeks", weekly: "Weekly" };
+const FREQ = { monthly: "Monthly", quarterly: "Quarterly", semiannual: "Every 6 months", yearly: "Yearly", biweekly: "Every 2 weeks", weekly: "Weekly" };
+const MONTH_STEP = { monthly: 1, quarterly: 3, semiannual: 6, yearly: 12 };
 const METHODS = ["Cash", "Check", "Zelle", "Venmo", "Cash App", "Bank transfer", "Other"];
 
 /* Dates are stored as YYYY-MM-DD and read in local time. */
@@ -180,11 +181,11 @@ function dueAt(p, k) {
   const a = parse(p.firstDue);
   if (p.frequency === "weekly") return addDays(p.firstDue, 7 * k);
   if (p.frequency === "biweekly") return addDays(p.firstDue, 14 * k);
-  const y = a.getFullYear(), m = a.getMonth() + k;
+  const y = a.getFullYear(), m = a.getMonth() + k * (MONTH_STEP[p.frequency] || 1);
   const last = new Date(y, m + 1, 0).getDate();
   return iso(new Date(y, m, Math.min(a.getDate(), last)));
 }
-const periodDays = (p) => p.frequency === "weekly" ? 7 : p.frequency === "biweekly" ? 14 : 30;
+const periodDays = (p) => ({ weekly: 7, biweekly: 14, quarterly: 91, semiannual: 182, yearly: 365 })[p.frequency] || 30;
 
 /* Each full payment amount covers one due date, in order, starting from the first due date.
    Payments made up to one period before the first due date count toward it. */
@@ -235,13 +236,13 @@ function renderPeople() {
   if (S.missing) { el.innerHTML = `<div class="empty"><strong>Saving isn't available here.</strong>Open this page on claude.ai while signed in to see and record payments.</div>`; return; }
   if (!S.loaded) return;
   const active = S.people.filter((p) => p.active !== false);
-  if (!active.length) { el.innerHTML = `<div class="empty"><strong>No one added yet.</strong>Tap <b>Add person</b>, enter their name, how much they pay and when it's due. Then record payments as they come in.</div>`; return; }
+  if (!active.length) { el.innerHTML = `<div class="empty"><strong>No board members added yet.</strong>Tap <b>Add board member</b> and enter their name, their payment amount and their payment date. Each member can have their own. Then record payments as they come in.</div>`; return; }
   const rows = active.map((p) => ({ p, st: status(p) })).sort((a, b) => a.st.next.localeCompare(b.st.next) || a.p.name.localeCompare(b.p.name));
   el.innerHTML = rows.map(({ p, st }) => `
     <div class="person ${st.state}">
       <div class="who">
         <div class="name">${esc(p.name)}</div>
-        <div class="sub">${esc(p.property || "No property listed")} · ${money(p.amount)} ${esc((FREQ[p.frequency] || "Monthly").toLowerCase())}</div>
+        <div class="sub">${p.role || p.property ? esc(p.role || p.property) + " · " : ""}${money(p.amount)} ${esc((FREQ[p.frequency] || "Monthly").toLowerCase())}</div>
       </div>
       <div>
         <div class="lab">Last paid</div>
@@ -263,7 +264,7 @@ function renderPeople() {
 function renderFilter() {
   const sel = $("#f-person"), cur = sel.value;
   const names = [...new Map(S.people.map((p) => [p.id, p.name])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  sel.innerHTML = `<option value="">Everyone</option>` + names.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join("");
+  sel.innerHTML = `<option value="">All members</option>` + names.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join("");
   sel.value = names.some(([id]) => id === cur) ? cur : "";
 }
 
@@ -291,7 +292,7 @@ function renderLedger() {
     <tfoot><tr><td>Total</td><td class="sub">${list.length} payment${list.length === 1 ? "" : "s"}</td><td class="amt num">${money(total)}</td><td colspan="3"></td></tr></tfoot>
   </table>`;
 }
-const nameOf = (x) => (S.people.find((p) => p.id === x.personId) || {}).name || x.personName || "Removed person";
+const nameOf = (x) => (S.people.find((p) => p.id === x.personId) || {}).name || x.personName || "Former board member";
 
 /* ---------- forms ---------- */
 function closeModal() { $("#modal-root").innerHTML = ""; }
@@ -301,20 +302,20 @@ function needDb() { if (!S.db) { toast("Saving isn't available in this view."); 
 
 function personForm(p) {
   const isNew = !p;
-  p = p || { name: "", property: "", amount: "", frequency: "monthly", firstDue: today(), note: "" };
+  p = p || { name: "", role: "", amount: "", frequency: "monthly", firstDue: today(), note: "" };
   $("#modal-root").innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="pm-title"><form class="modal" id="person-form">
-    <h3 id="pm-title">${isNew ? "Add person" : "Edit " + esc(p.name)}</h3>
+    <h3 id="pm-title">${isNew ? "Add board member" : "Edit " + esc(p.name)}</h3>
     <div class="field"><label for="p-name">Name</label><input id="p-name" required maxlength="80" value="${esc(p.name)}" placeholder="e.g. Marcus Lee"></div>
-    <div class="field"><label for="p-prop">Property or unit</label><input id="p-prop" maxlength="80" value="${esc(p.property)}" placeholder="e.g. 1204 Holleman Dr, Room B"></div>
+    <div class="field"><label for="p-prop">Board role (optional)</label><input id="p-prop" maxlength="80" value="${esc(p.role || p.property || "")}" placeholder="e.g. Treasurer"></div>
     <div class="row2">
-      <div class="field"><label for="p-amt">Payment amount ($)</label><input id="p-amt" type="number" min="0" step="0.01" required value="${esc(p.amount)}"></div>
+      <div class="field"><label for="p-amt">Their payment amount ($)</label><input id="p-amt" type="number" min="0" step="0.01" required value="${esc(p.amount)}"></div>
       <div class="field"><label for="p-freq">How often</label><select id="p-freq">${Object.entries(FREQ).map(([k, v]) => `<option value="${k}"${p.frequency === k ? " selected" : ""}>${v}</option>`).join("")}</select></div>
     </div>
-    <div class="field"><label for="p-first">First due date</label><input id="p-first" type="date" required value="${esc(p.firstDue)}"><span class="sub">Each payment of the full amount covers the next due date after this one.</span></div>
+    <div class="field"><label for="p-first">Their payment date</label><input id="p-first" type="date" required value="${esc(p.firstDue)}"><span class="sub">The first due date you're tracking for this member. Later due dates repeat on the same day, as often as they pay. Each full payment covers one due date, in order.</span></div>
     <div class="field"><label for="p-note">Notes</label><textarea id="p-note" rows="2" maxlength="400">${esc(p.note || "")}</textarea></div>
     <div class="modal-acts">
       ${isNew ? "" : `<button class="btn ghost" type="button" id="p-remove">Remove</button>`}
-      <div class="right"><button class="btn ghost" type="button" id="p-cancel">Cancel</button><button class="btn" type="submit">${isNew ? "Add person" : "Save"}</button></div>
+      <div class="right"><button class="btn ghost" type="button" id="p-cancel">Cancel</button><button class="btn" type="submit">${isNew ? "Add board member" : "Save"}</button></div>
     </div>
   </form></div>`;
   $("#p-name").focus();
@@ -328,7 +329,7 @@ function personForm(p) {
   $("#person-form").onsubmit = (e) => {
     e.preventDefault();
     if (!needDb()) return;
-    const body = { name: $("#p-name").value.trim(), property: $("#p-prop").value.trim(), amount: Number($("#p-amt").value) || 0, frequency: $("#p-freq").value, firstDue: $("#p-first").value || today(), note: $("#p-note").value.trim(), active: true };
+    const body = { name: $("#p-name").value.trim(), role: $("#p-prop").value.trim(), amount: Number($("#p-amt").value) || 0, frequency: $("#p-freq").value, firstDue: $("#p-first").value || today(), note: $("#p-note").value.trim(), active: true };
     if (!body.name) return;
     const ref = isNew ? S.db.collection("people").doc() : S.db.doc("people/" + p.id);
     (isNew ? ref.set({ ...body, createdAt: new Date().toISOString() }) : ref.update(body)).then(() => { closeModal(); toast(isNew ? body.name + " added" : "Saved"); }).catch(fail);
@@ -338,13 +339,13 @@ function personForm(p) {
 function paymentForm(opts) {
   const active = S.people.filter((p) => p.active !== false).sort((a, b) => a.name.localeCompare(b.name));
   const x = opts.payment;
-  if (!x && !active.length) { toast("Add a person first."); personForm(); return; }
+  if (!x && !active.length) { toast("Add a board member first."); personForm(); return; }
   const pid = x ? x.personId : (opts.personId || active[0].id);
   const prefill = (id) => { const p = S.people.find((q) => q.id === id); return p ? status(p).owed : ""; };
   const list = x && !active.some((p) => p.id === pid) ? [{ id: pid, name: nameOf(x) }, ...active] : active;
   $("#modal-root").innerHTML = `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="pay-title"><form class="modal" id="pay-form">
     <h3 id="pay-title">${x ? "Edit payment" : "Record payment"}</h3>
-    <div class="field"><label for="y-person">Name</label><select id="y-person">${list.map((p) => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></div>
+    <div class="field"><label for="y-person">Board member</label><select id="y-person">${list.map((p) => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></div>
     <div class="row2">
       <div class="field"><label for="y-amt">Amount ($)</label><input id="y-amt" type="number" min="0" step="0.01" required value="${esc(x ? x.amount : prefill(pid))}"></div>
       <div class="field"><label for="y-date">Date paid</label><input id="y-date" type="date" required value="${esc(x ? x.date : today())}"></div>
