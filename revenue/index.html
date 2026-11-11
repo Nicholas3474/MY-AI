@@ -82,6 +82,8 @@ section.card { background: var(--surface); border: 1px solid var(--line); border
 .pill.overdue { background: var(--warn-soft); color: var(--warn); }
 .pill.soon { background: var(--gold-soft); color: var(--gold); }
 .pill.later { background: var(--ok-soft); color: var(--ok); }
+.pill.done { background: var(--accent-soft); color: var(--accent); }
+.person.done { border-left-color: var(--accent); }
 @media (max-width: 760px) { .person { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .person .who { grid-column: 1 / -1; } .person .acts { grid-column: 1 / -1; justify-content: flex-start; } }
 
 .empty { text-align: center; padding: 26px 12px; color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; }
@@ -163,8 +165,9 @@ const S = { db: null, people: [], payments: [], loaded: false, missing: false };
 const $ = (q) => document.querySelector(q);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const money = (n) => (Number(n) || 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: (Number(n) % 1) ? 2 : 0 });
-const FREQ = { monthly: "Monthly", quarterly: "Quarterly", semiannual: "Every 6 months", yearly: "Yearly", biweekly: "Every 2 weeks", weekly: "Weekly" };
-const MONTH_STEP = { monthly: 1, quarterly: 3, semiannual: 6, yearly: 12 };
+const FREQ = { yearly: "Yearly", pledge3: "3-year pledge, paid yearly", upfront3: "3 years paid up front" };
+const MONTH_STEP = { yearly: 12, pledge3: 12, upfront3: 36 };
+const PLEDGE_YEARS = 3;
 const METHODS = ["Cash", "Check", "Zelle", "Venmo", "Cash App", "Bank transfer", "Other"];
 
 /* Dates are stored as YYYY-MM-DD and read in local time. */
@@ -181,16 +184,15 @@ function fiscalYear(s) {
 }
 const fmtDate = (s) => s ? parse(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: parse(s).getFullYear() === new Date().getFullYear() ? undefined : "numeric" }) : "—";
 
-/* The k-th due date after the first one. Monthly keeps the same day of month, clamped for short months. */
+/* The k-th due date after the member's payment date: every year, or every 3 years when paid up front.
+   Keeps the same day of the month (Feb 29 falls back to Feb 28). */
 function dueAt(p, k) {
   const a = parse(p.firstDue);
-  if (p.frequency === "weekly") return addDays(p.firstDue, 7 * k);
-  if (p.frequency === "biweekly") return addDays(p.firstDue, 14 * k);
-  const y = a.getFullYear(), m = a.getMonth() + k * (MONTH_STEP[p.frequency] || 1);
+  const y = a.getFullYear(), m = a.getMonth() + k * (MONTH_STEP[p.frequency] || 12);
   const last = new Date(y, m + 1, 0).getDate();
   return iso(new Date(y, m, Math.min(a.getDate(), last)));
 }
-const periodDays = (p) => ({ weekly: 7, biweekly: 14, quarterly: 91, semiannual: 182, yearly: 365 })[p.frequency] || 30;
+const periodDays = (p) => p.frequency === "upfront3" ? 1096 : 365;
 
 /* Each lump sum covers one due date. The next due date is the first scheduled date after the latest payment,
    allowing a payment to come in up to a third of a period early (about 4 months for yearly dues).
@@ -199,17 +201,19 @@ const MIN_PAYMENT = 2500;
 function status(p) {
   const mine = S.payments.filter((x) => x.personId === p.id).sort((a, b) => b.date.localeCompare(a.date));
   const last = mine[0] || null;
-  let next = p.firstDue;
+  let k = 0;
   if (last) {
     const cutoff = addDays(last.date, Math.round(periodDays(p) / 3));
-    let k = Math.floor(daysBetween(p.firstDue, cutoff) / periodDays(p)) - 2;
+    k = Math.floor(daysBetween(p.firstDue, cutoff) / periodDays(p)) - 2;
     while (dueAt(p, k) <= cutoff) k++;
-    next = dueAt(p, k);
-    if (next < p.firstDue) next = p.firstDue;
+    if (k < 0) k = 0;
   }
+  const next = dueAt(p, k);
+  /* A 3-year pledge ends after its third yearly payment. */
+  if (p.frequency === "pledge3" && k >= PLEDGE_YEARS) return { last, next: "", days: Infinity, state: "done", done: true, k, owed: 0 };
   const days = daysBetween(today(), next);
-  const state = days < 0 ? "overdue" : days <= 7 ? "soon" : "later";
-  return { last, next, days, state, owed: Number(p.amount) || 0 };
+  const state = days < 0 ? "overdue" : days <= 30 ? "soon" : "later";
+  return { last, next, days, state, done: false, k, owed: Number(p.amount) || 0 };
 }
 function dueLabel(st) {
   if (st.days < 0) return `${-st.days} day${st.days === -1 ? "" : "s"} late`;
@@ -227,12 +231,12 @@ function renderStats() {
   const year = fyPays.reduce((s, x) => s + Number(x.amount || 0), 0);
   let expected = 0;
   for (const p of S.people.filter((p) => p.active !== false)) {
-    for (let k = 0; k < 400; k++) { const d = dueAt(p, k); if (d.slice(0, 7) > ym) break; if (d.startsWith(ym)) expected += Number(p.amount) || 0; }
+    for (let k = 0; k < 400; k++) { if (p.frequency === "pledge3" && k >= PLEDGE_YEARS) break; const d = dueAt(p, k); if (d.slice(0, 7) > ym) break; if (d.startsWith(ym)) expected += Number(p.amount) || 0; }
   }
   const sts = S.people.filter((p) => p.active !== false).map((p) => ({ p, st: status(p) }));
   const late = sts.filter((x) => x.st.state === "overdue");
   const lateAmt = late.reduce((s, x) => s + x.st.owed, 0);
-  const nextUp = sts.filter((x) => x.st.days >= 0).sort((a, b) => a.st.next.localeCompare(b.st.next))[0];
+  const nextUp = sts.filter((x) => !x.st.done && x.st.days >= 0).sort((a, b) => a.st.next.localeCompare(b.st.next))[0];
   const monthName = new Date().toLocaleDateString("en-US", { month: "long" });
   $("#stats").innerHTML = `
     <div class="stat"><div class="k">Collected in ${monthName}</div><div class="v num">${money(month)}</div><div class="s num">of ${money(expected)} scheduled</div></div>
@@ -247,12 +251,13 @@ function renderPeople() {
   if (!S.loaded) return;
   const active = S.people.filter((p) => p.active !== false);
   if (!active.length) { el.innerHTML = `<div class="empty"><strong>No board members added yet.</strong>Tap <b>Add board member</b> and enter their name, their payment amount and their payment date. Each member can have their own. Then record payments as they come in.</div>`; return; }
-  const rows = active.map((p) => ({ p, st: status(p) })).sort((a, b) => a.st.next.localeCompare(b.st.next) || a.p.name.localeCompare(b.p.name));
+  const key = (st) => st.done ? "9999" : st.next;
+  const rows = active.map((p) => ({ p, st: status(p) })).sort((a, b) => key(a.st).localeCompare(key(b.st)) || a.p.name.localeCompare(b.p.name));
   el.innerHTML = rows.map(({ p, st }) => `
     <div class="person ${st.state}">
       <div class="who">
         <div class="name">${esc(p.name)}</div>
-        <div class="sub">${p.role || p.property ? esc(p.role || p.property) + " · " : ""}${money(p.amount)} ${esc((FREQ[p.frequency] || "Monthly").toLowerCase())}</div>
+        <div class="sub">${p.role || p.property ? esc(p.role || p.property) + " · " : ""}${money(p.amount)} · ${esc(FREQ[p.frequency] || "Yearly")}</div>
       </div>
       <div>
         <div class="lab">Last paid</div>
@@ -261,8 +266,9 @@ function renderPeople() {
       </div>
       <div>
         <div class="lab">Next due</div>
-        <div class="val num">${fmtDate(st.next)} · ${money(st.owed)}</div>
-        <div><span class="pill ${st.state}">${dueLabel(st)}</span></div>
+        ${st.done ? `<div class="val">Pledge complete</div>
+        <div><span class="pill done">All 3 years paid</span></div>` : `<div class="val num">${fmtDate(st.next)} · ${money(st.owed)}</div>
+        <div><span class="pill ${st.state}">${dueLabel(st)}</span>${p.frequency === "pledge3" ? ` <span class="sub">Payment ${st.k + 1} of 3</span>` : ""}${p.frequency === "upfront3" ? ` <span class="sub">Covers 3 years</span>` : ""}</div>`}
       </div>
       <div class="acts">
         <button class="btn small" type="button" data-pay="${esc(p.id)}">Record payment</button>
@@ -318,10 +324,10 @@ function personForm(p) {
     <div class="field"><label for="p-name">Name</label><input id="p-name" required maxlength="80" value="${esc(p.name)}" placeholder="e.g. Marcus Lee"></div>
     <div class="field"><label for="p-prop">Board role (optional)</label><input id="p-prop" maxlength="80" value="${esc(p.role || p.property || "")}" placeholder="e.g. Treasurer"></div>
     <div class="row2">
-      <div class="field"><label for="p-amt">Their lump sum ($)</label><input id="p-amt" type="number" min="${MIN_PAYMENT}" step="0.01" required value="${esc(p.amount)}"><span class="sub">At least $2,500</span></div>
-      <div class="field"><label for="p-freq">How often</label><select id="p-freq">${Object.entries(FREQ).map(([k, v]) => `<option value="${k}"${p.frequency === k ? " selected" : ""}>${v}</option>`).join("")}</select></div>
+      <div class="field"><label for="p-amt">Lump sum per payment ($)</label><input id="p-amt" type="number" min="${MIN_PAYMENT}" step="0.01" required value="${esc(p.amount)}"><span class="sub">At least $2,500</span></div>
+      <div class="field"><label for="p-freq">Payment plan</label><select id="p-freq">${Object.entries(FREQ).map(([k, v]) => `<option value="${k}"${p.frequency === k ? " selected" : ""}>${v}</option>`).join("")}</select></div>
     </div>
-    <div class="field"><label for="p-first">Their payment date</label><input id="p-first" type="date" required value="${esc(p.firstDue)}"><span class="sub">Any date this member's payment is due, past or upcoming. Due dates repeat on that day, as often as they pay. Their next due date is the first one after their latest payment.</span></div>
+    <div class="field"><label for="p-first">Their payment date</label><input id="p-first" type="date" required value="${esc(p.firstDue)}"><span class="sub">Yearly: any date their payment is due, past or upcoming. 3-year pledge: the date the first of the 3 yearly payments is due. 3 years up front: any date their payment is due, then every 3 years after.</span></div>
     <div class="field"><label for="p-note">Notes</label><textarea id="p-note" rows="2" maxlength="400">${esc(p.note || "")}</textarea></div>
     <div class="modal-acts">
       ${isNew ? "" : `<button class="btn ghost" type="button" id="p-remove">Remove</button>`}
