@@ -672,16 +672,20 @@ function renderCheckin() {
     <div class="row" style="margin-top:8px"><button class="btn primary" data-act="save-morning" type="button">Save</button>${d.morningA ? `<span class="sub">Saved. You can come back to this tonight.</span>` : ""}</div>`;
 }
 
-function isWeekday() { return ["Mon", "Tue", "Wed", "Thu", "Fri"].includes(partsIn(cfg().tz).weekday); }
+const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Training days come from the saved split; without one, fall back to Monday–Friday.
+function gymDays() { const d = S.training && S.training.days; const k = d ? WEEK.filter((w) => d[w]) : []; return k.length ? k : WEEK.slice(0, 5); }
+function isWeekday() { return WEEK.slice(0, 5).includes(partsIn(cfg().tz).weekday); }
 function gymBox(d) {
-  const t = today(), back = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(partsIn(cfg().tz).weekday);
-  let n = 0; for (let i = 0; i <= back; i++) if ((S.days[addDays(t, -i)] || {}).gym) n++;
+  const t = today(), wd = partsIn(cfg().tz).weekday, back = WEEK.indexOf(wd), days = gymDays();
+  if (!days.includes(wd)) return `<p class="hint" style="margin-top:14px">Rest day. No workout scheduled today.</p>`;
+  let n = 0; for (let i = 0; i <= back; i++) if (days.includes(WEEK[back - i]) && (S.days[addDays(t, -i)] || {}).gym) n++;
   const w = S.training && S.training.days && S.training.days[partsIn(cfg().tz).weekday];
   const open = (() => { try { return localStorage.getItem("anchor.workout") !== "closed"; } catch { return true; } })();
   const workout = w ? `<details class="workout" ${open ? "open" : ""}><summary>Today: ${esc(w.title)}</summary>
       <ul>${(w.exercises || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
       ${S.training.url ? `<a class="btn link" href="${esc(safeUrl(S.training.url))}" target="_blank" rel="noopener noreferrer">Full training plan →</a>` : ""}</details>` : "";
-  return `<label class="gym"><input type="checkbox" data-act="gym" ${d.gym ? "checked" : ""}><span>I went to the gym</span><span class="sub">This week: ${n} of 5</span></label>${workout}`;
+  return `<label class="gym"><input type="checkbox" data-act="gym" ${d.gym ? "checked" : ""}><span>I went to the gym</span><span class="sub">This week: ${n} of ${days.length}</span></label>${workout}`;
 }
 
 function renderProverbs() {
